@@ -1022,7 +1022,17 @@ body {
   .chat-rail { width: 300px !important; }
 }
 @media (max-width: 760px) {
-  .chat-rail { display: none; } /* 超窄屏藏对话栏（可用把手唤出） */
+  /* UX-005：超窄屏对话栏不再 display:none（会把反馈闭环切断）——改为右侧抽屉，
+     由 header 的对话开关（chat-toggle，始终可见）唤出/收起。 */
+  .chat-rail {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(92vw, 360px) !important; /* 覆盖拖拽内联宽度 */
+    z-index: 40;
+    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.18);
+  }
   .app-header { flex-wrap: wrap; height: auto; padding: 10px 14px; gap: 10px; }
 }
 .seg {

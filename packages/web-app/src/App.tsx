@@ -941,26 +941,26 @@ export function App() {
             <div className="stage-toolbar">
               <div className="seg" role="tablist" aria-label="预览目标平台">
                 <span className="seg-label">平台</span>
-                <button type="button" className={`tab${platform === "sogou" ? " active" : ""}`} onClick={() => setPlatform("sogou")}>搜狗</button>
-                <button type="button" className={`tab${platform === "baidu" ? " active" : ""}`} onClick={() => setPlatform("baidu")}>百度</button>
+                <button type="button" role="tab" aria-selected={platform === "sogou"} className={`tab${platform === "sogou" ? " active" : ""}`} onClick={() => setPlatform("sogou")}>搜狗</button>
+                <button type="button" role="tab" aria-selected={platform === "baidu"} className={`tab${platform === "baidu" ? " active" : ""}`} onClick={() => setPlatform("baidu")}>百度</button>
               </div>
-              <div className="seg" aria-label="预览设备">
+              <div className="seg" role="tablist" aria-label="预览设备">
                 <span className="seg-label">设备</span>
-                <button type="button" className={`tab${device === "pc" ? " active" : ""}`} onClick={() => setDevice("pc")}>PC</button>
-                <button type="button" className={`tab${device === "mobile" ? " active" : ""}`} onClick={() => setDevice("mobile")}>手机</button>
+                <button type="button" role="tab" aria-selected={device === "pc"} className={`tab${device === "pc" ? " active" : ""}`} onClick={() => setDevice("pc")}>PC</button>
+                <button type="button" role="tab" aria-selected={device === "mobile"} className={`tab${device === "mobile" ? " active" : ""}`} onClick={() => setDevice("mobile")}>手机</button>
               </div>
               <div className="seg" role="tablist" aria-label="深浅模式">
                 <span className="seg-label">模式</span>
-                <button type="button" className={`tab${themeMode === "auto" ? " active" : ""}`} onClick={() => setThemeMode("auto")} title="设计原生主题">默认</button>
-                <button type="button" className={`tab${themeMode === "light" ? " active" : ""}`} onClick={() => setThemeMode("light")} title="浅色模式（FR-QA-3 双模式）">浅色</button>
-                <button type="button" className={`tab${themeMode === "dark" ? " active" : ""}`} onClick={() => setThemeMode("dark")} title="深色模式（FR-QA-3 双模式）">深色</button>
+                <button type="button" role="tab" aria-selected={themeMode === "auto"} className={`tab${themeMode === "auto" ? " active" : ""}`} onClick={() => setThemeMode("auto")} title="设计原生主题">默认</button>
+                <button type="button" role="tab" aria-selected={themeMode === "light"} className={`tab${themeMode === "light" ? " active" : ""}`} onClick={() => setThemeMode("light")} title="浅色模式（FR-QA-3 双模式）">浅色</button>
+                <button type="button" role="tab" aria-selected={themeMode === "dark"} className={`tab${themeMode === "dark" ? " active" : ""}`} onClick={() => setThemeMode("dark")} title="深色模式（FR-QA-3 双模式）">深色</button>
               </div>
               {device === "mobile" && (
                 <div className="seg" role="tablist" aria-label="屏幕密度档位">
                   <span className="seg-label">DPI</span>
-                  <button type="button" className={`tab${dpi === "sd" ? " active" : ""}`} onClick={() => setDpi("sd")} title="标清 ~160dpi（低密度老机型）">标清</button>
-                  <button type="button" className={`tab${dpi === "hd" ? " active" : ""}`} onClick={() => setDpi("hd")} title="高清 ~320dpi（主流机型）">高清</button>
-                  <button type="button" className={`tab${dpi === "uhd" ? " active" : ""}`} onClick={() => setDpi("uhd")} title="超高清 ~480dpi（高密度旗舰，易发虚）">超清</button>
+                  <button type="button" role="tab" aria-selected={dpi === "sd"} className={`tab${dpi === "sd" ? " active" : ""}`} onClick={() => setDpi("sd")} title="标清 ~160dpi（低密度老机型）">标清</button>
+                  <button type="button" role="tab" aria-selected={dpi === "hd"} className={`tab${dpi === "hd" ? " active" : ""}`} onClick={() => setDpi("hd")} title="高清 ~320dpi（主流机型）">高清</button>
+                  <button type="button" role="tab" aria-selected={dpi === "uhd"} className={`tab${dpi === "uhd" ? " active" : ""}`} onClick={() => setDpi("uhd")} title="超高清 ~480dpi（高密度旗舰，易发虚）">超清</button>
                 </div>
               )}
               {device === "mobile" && (
@@ -1097,8 +1097,8 @@ export function App() {
                 <span className="chat-head-title">对话</span>
               </div>
 
-              {/* 消息流 */}
-              <div className="chat-log" data-testid="chat-log">
+              {/* 消息流（UX-005：live region，新消息/回显对读屏可感知） */}
+              <div className="chat-log" data-testid="chat-log" aria-live="polite" role="log">
                 {chatLog.length === 0 && (
                   <div className="chat-empty">在下方输入想法生成皮肤，或点选预览里的键盘/候选栏后提意见。</div>
                 )}
@@ -1109,7 +1109,7 @@ export function App() {
                   </div>
                 ))}
                 {echo && (
-                  <div className="feedback-echo" data-testid="feedback-echo">
+                  <div className="feedback-echo" data-testid="feedback-echo" aria-live="polite">
                     已听懂：<b>{FB_LABEL[echo.type] ?? echo.type}</b>{echo.picked ? <>（针对 <b>{echo.picked}</b>）</> : null} · {echo.scope} · 本版自检{echo.passed ? "通过" : "有问题"}
                   </div>
                 )}
@@ -1278,6 +1278,7 @@ export function App() {
               aria-expanded={menuOpen}
               aria-label="设置"
               data-testid="settings-menu-btn"
+              data-settings-opener=""
             >
               <GearIcon />
               <span className="corner-label">IMSkin</span>

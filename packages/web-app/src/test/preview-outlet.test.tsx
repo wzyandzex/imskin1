@@ -61,13 +61,13 @@ describe("PRE-001 工作台联动：平台×设备切换驱动 outlet", () => {
     render(<App />);
     expect(screen.getByTestId("outlet-badge").textContent).toBe("搜狗 PC");
 
-    await user.click(screen.getByRole("button", { name: "百度" }));
+    await user.click(screen.getByRole("tab", { name: "百度" }));
     expect(screen.getByTestId("outlet-badge").textContent).toBe("百度 PC");
 
-    await user.click(screen.getByRole("button", { name: "手机" }));
+    await user.click(screen.getByRole("tab", { name: "手机" }));
     expect(screen.getByTestId("outlet-badge").textContent).toBe("百度 Android");
 
-    await user.click(screen.getByRole("button", { name: "搜狗" }));
+    await user.click(screen.getByRole("tab", { name: "搜狗" }));
     expect(screen.getByTestId("outlet-badge").textContent).toBe("搜狗 Android");
   });
 });

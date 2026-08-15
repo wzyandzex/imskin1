@@ -8,7 +8,7 @@
  * 目前实装：常规（占位说明）、接入模型（多配置管理 + 全面参数 + 启用开关）、键盘快捷键。
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { SHORTCUTS, actionForCombo, normalizeCombo } from "../shortcuts.ts";
 import {
   type ModelConfig,
@@ -46,8 +46,41 @@ export function SettingsPage({ onBack, combos, onSetCombo, modelConfigs, onModel
   const [cat, setCat] = useState(initialCat);
   const [query, setQuery] = useState("");
 
+  // UX-005 dialog 语义：打开时焦点移入、Esc 关闭、关闭后焦点还给触发者。
+  // onBack 经 ref 引用（App 传内联箭头函数，每次渲染都变），避免 effect 反复重挂。
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const backRef = useRef(onBack);
+  backRef.current = onBack;
+  useEffect(() => {
+    const prev = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    dialogRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") backRef.current();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      // 焦点还原：优先还给打开者；若打开者已卸载（弹出菜单项）或从未获得焦点
+      // （如键盘/程序化打开，activeElement 仍是 body），回退到常驻设置入口，
+      // 避免焦点散落到 body（WAI-ARIA dialog 关闭语义）。
+      const restore =
+        prev && prev !== document.body && prev.isConnected
+          ? prev
+          : document.querySelector<HTMLElement>("[data-settings-opener]");
+      restore?.focus();
+    };
+  }, []);
+
   return (
-    <div className="settings" data-testid="settings-page">
+    <div
+      className="settings"
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="设置"
+      tabIndex={-1}
+      data-testid="settings-page"
+    >
       <aside className="settings-nav">
         <button type="button" className="settings-back" onClick={onBack} data-testid="settings-back">
           ← 返回应用

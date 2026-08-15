@@ -120,13 +120,13 @@ describe("工作台反馈主循环", () => {
     // 默认 搜狗×PC
     expect(screen.getByRole("button", { name: /导出 \.ssf/ })).toBeTruthy();
     // 搜狗×手机 → 移动 .ssf
-    await user.click(screen.getByRole("button", { name: "手机" }));
+    await user.click(screen.getByRole("tab", { name: "手机" }));
     expect(screen.getByRole("button", { name: /导出 移动 \.ssf/ })).toBeTruthy();
     // 百度×手机 → 移动 .bds
-    await user.click(screen.getByRole("button", { name: "百度" }));
+    await user.click(screen.getByRole("tab", { name: "百度" }));
     expect(screen.getByRole("button", { name: /导出 移动 \.bds/ })).toBeTruthy();
     // 百度×PC → .bps
-    await user.click(screen.getByRole("button", { name: "PC" }));
+    await user.click(screen.getByRole("tab", { name: "PC" }));
     expect(screen.getByRole("button", { name: /导出 \.bps/ })).toBeTruthy();
   });
 
