@@ -130,7 +130,7 @@ describe("工作台反馈主循环", () => {
     expect(screen.getByRole("button", { name: /导出 \.bps/ })).toBeTruthy();
   });
 
-  test("「导出全部」按钮存在，可一键导出四出口", async () => {
+  test("「导出全部」按钮存在，可一键导出四出口（UX-003：需先确认版本）", async () => {
     // 模拟 URL.createObjectURL 与 a.click 下载，避免 jsdom 报 NotImplemented
     const orig = URL.createObjectURL;
     const origRevoke = URL.revokeObjectURL;
@@ -148,8 +148,15 @@ describe("工作台反馈主循环", () => {
     try {
       const user = userEvent.setup();
       render(<App />);
-      const btn = screen.getByRole("button", { name: "导出全部" });
-      expect(btn).toBeTruthy();
+      // UX-003：未确认时按钮禁用，点击不产生下载
+      const gateBtn = screen.getByRole("button", { name: "导出全部" }) as HTMLButtonElement;
+      expect(gateBtn.disabled).toBe(true);
+      await user.click(gateBtn);
+      expect(clicks.length).toBe(0);
+      // 确认后导出放行
+      await user.click(screen.getByTestId("confirm-version"));
+      const btn = screen.getByRole("button", { name: "导出全部" }) as HTMLButtonElement;
+      expect(btn.disabled).toBe(false);
       await user.click(btn);
       // 四出口各下载一个文件
       expect(clicks.length).toBe(4);

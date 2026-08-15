@@ -213,3 +213,40 @@ test("快照是深拷贝：改动快照对象不污染原 store", () => {
   snap.versions[0].data!.n = 999;
   assert.equal(store.getVersion("v1")?.data?.n, 1);
 });
+
+// —— UX-003 定稿确认：ready → confirmed 转移规则 ——
+test("confirmVersion：ready 可确认；确认状态进入快照并随快照恢复", () => {
+  const store = new ProjectStore();
+  const p = store.createProject("X");
+  store.addVersion(p.id, { status: "ready" });
+  const v = store.confirmVersion("v1");
+  assert.equal(v.status, "confirmed");
+  assert.equal(store.getVersion("v1")?.status, "confirmed");
+
+  const restored = ProjectStore.fromSnapshot(store.snapshot());
+  assert.equal(restored.getVersion("v1")?.status, "confirmed"); // 持久化往返保留
+});
+
+test("confirmVersion：draft（自检未过）与重复确认抛可展示错误", () => {
+  const store = new ProjectStore();
+  const p = store.createProject("X");
+  store.addVersion(p.id, { status: "draft" });
+  assert.throws(() => store.confirmVersion("v1"), /自检未通过/);
+
+  store.addVersion(p.id, { status: "ready" });
+  store.confirmVersion("v2");
+  assert.throws(() => store.confirmVersion("v2"), /已确认/);
+
+  assert.throws(() => store.confirmVersion("v404"), /未知版本/);
+});
+
+test("确认后反馈 fork：新版本不继承 confirmed（导出门禁自动回落）", () => {
+  const store = new ProjectStore();
+  const p = store.createProject("X");
+  store.addVersion(p.id, { status: "ready" });
+  store.confirmVersion("v1");
+  const child = store.fork("v1", { status: "ready", data: {} }); // orchestrator.applyFeedback 的路径
+  assert.equal(child.status, "ready");
+  assert.notEqual(child.status, "confirmed");
+  assert.equal(store.getVersion("v1")?.status, "confirmed"); // 父版本确认不受影响
+});

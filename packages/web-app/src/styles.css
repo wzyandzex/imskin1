@@ -867,6 +867,33 @@ body {
   border-radius: 8px;
   padding: 6px 10px;
 }
+/* UX-003 定稿门禁：确认按钮/已确认徽标 + 未确认提示条 */
+.confirm-btn {
+  border-color: rgba(46, 144, 83, 0.5) !important;
+  color: #2e9053 !important;
+}
+.confirmed-badge {
+  font-size: 12px;
+  color: #2e9053;
+  border: 1px solid rgba(46, 144, 83, 0.4);
+  background: rgba(46, 144, 83, 0.08);
+  border-radius: 8px;
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+.export-gate {
+  font-size: 12px;
+  color: #8a6d1a;
+  background: rgba(184, 134, 11, 0.06);
+  border: 1px solid rgba(184, 134, 11, 0.3);
+  border-radius: 8px;
+  padding: 5px 10px;
+  margin: 6px 0 2px;
+}
+.export-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 /* 平台状态条（PRE-001）：当前目标徽标 + 状态栏差异 + 模拟项标注 */
 .pick-mode-hint {
   font-size: 12px;

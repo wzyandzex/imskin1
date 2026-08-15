@@ -146,6 +146,24 @@ export class ProjectStore {
     });
   }
 
+  /**
+   * UX-003 定稿确认：ready → confirmed 的唯一入口（显式用户命令产生，docs/01 §5.1）。
+   * 只有通过自检（ready）的版本可确认；draft（自检未过）抛错且信息可直接展示。
+   * 确认后的任何反馈/fork 产生新版本（ready/draft），不继承确认——由 fork 覆写保证。
+   * 注意：confirmed 是版本生命周期状态，**不代表任何出口 install_verified**（ADR-001）。
+   */
+  confirmVersion(versionId: string): Version {
+    const v = this.requireVersion(versionId);
+    if (v.status === "confirmed") {
+      throw new Error(`版本 ${versionId} 已确认，无需重复确认`);
+    }
+    if (v.status !== "ready") {
+      throw new Error(`版本 ${versionId} 状态为 ${v.status}（自检未通过），暂不能确认`);
+    }
+    v.status = "confirmed";
+    return this.snapshotVersion(v);
+  }
+
   /** 从根到该版本的血缘链（含自身，根在前）。未知 versionId 抛错。 */
   lineage(versionId: string): Version[] {
     let cur: Version | undefined = this.requireVersion(versionId);

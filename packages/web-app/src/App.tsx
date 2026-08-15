@@ -382,6 +382,9 @@ export function App() {
   };
 
   const versions = orch.store.listVersions(project.id);
+  // UX-003 定稿门禁：仅 confirmed 版本可导出正式包（FR-VER-3：显式确认才进导出）。
+  const currentVersion = versions.find((v) => v.id === currentId);
+  const versionConfirmed = currentVersion?.status === "confirmed";
   // 当前预览皮肤：随 themeMode 切换主版本/派生变体（FR-QA-3 双模式）。导出/标题也用它，保证所见即所得。
   const skin: SkinManifest = ((): SkinManifest => {
     const d = orch.readDesign(currentId);
@@ -609,6 +612,21 @@ export function App() {
     persist(fb.version.id);
   };
 
+  // —— UX-003 定稿确认 ——
+  const [confirmHint, setConfirmHint] = useState<string | null>(null);
+  /** 确认当前版本（唯一进入 confirmed 的入口）；draft（自检未过）给可操作提示。 */
+  const confirmCurrent = () => {
+    try {
+      orch.store.confirmVersion(currentId);
+      setConfirmHint(null);
+      pushChat("sys", "已确认此版本，可导出正式包（各出口真机验证状态见导出说明）");
+      refresh();
+      persist(currentId);
+    } catch (e) {
+      setConfirmHint(e instanceof Error ? e.message : String(e));
+    }
+  };
+
   // 清空所有版本，从新的初始项目重来（并清除本地存档）。
   const reset = () => {
     try {
@@ -636,7 +654,9 @@ export function App() {
 
   // 按当前平台×设备象限导出对应出口（四出口：搜狗PC .ssf / 搜狗Android .ssf / 百度PC .bps / 百度Android .bds）。
   // 真实位图/布局坐标待 A3 图像生成接入；当前产出结构正确、可打包的配置骨架。导出当前预览的深/浅模式（FR-QA-3）。
+  // UX-003：仅已确认（confirmed）版本可导出正式包——按钮 disabled 之外的双保险。
   const exportSkin = () => {
+    if (!versionConfirmed) return;
     const base = skin.name || "skin";
     const set = exportSkinBytes(currentId);
     if (platform === "sogou") {
@@ -656,6 +676,7 @@ export function App() {
 
   // 一键导出全部四个出口（搜狗PC / 搜狗Android / 百度PC / 百度Android）。导出当前预览的深/浅模式（FR-QA-3）。
   const exportAll = () => {
+    if (!versionConfirmed) return;
     const base = skin.name || "skin";
     const set = exportSkinBytes(currentId);
     downloadBytes(set.sogouPc, `${base}-sogou-pc.ssf`);
@@ -966,18 +987,35 @@ export function App() {
               >
                 {compareMode ? "退出对比" : "并排对比"}
               </button>
+              {versionConfirmed ? (
+                <span className="confirmed-badge" data-testid="confirmed-badge" title="已确认此版本；此后任何修改都会产生新版本并回到未确认状态">
+                  ✔ 已确认
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  className="export-btn confirm-btn"
+                  onClick={confirmCurrent}
+                  data-testid="confirm-version"
+                  title="确认此版本后才能导出正式包（FR-VER-3：系统不擅自判定“已改好”）"
+                >
+                  确认此版本
+                </button>
+              )}
               <button
                 type="button"
                 className="export-btn"
                 onClick={exportSkin}
+                disabled={!versionConfirmed}
                 title={
-                  platform === "sogou"
+                  (versionConfirmed ? "" : "需先「确认此版本」；") +
+                  (platform === "sogou"
                     ? device === "pc"
                       ? "导出搜狗 PC .ssf（skin.ini 字段经 ssfconv/真实样本逆向确证，UTF-16；真机安装待验证）"
                       : "导出搜狗 Android .ssf（普通 zip，phoneTheme.ini+theme/layout；结构经真实 APK 逆向确证）"
                     : device === "pc"
                       ? "导出百度 PC .bps（skin.ini+Skin.xml+Candidate/Status；结构经真实皮肤解包确证；真机安装待验证）"
-                      : "导出百度 Android .bds（Info.txt+Token.txt+port/land+css.ini；结构经真实 APK 逆向确证）"
+                      : "导出百度 Android .bds（Info.txt+Token.txt+port/land+css.ini；结构经真实 APK 逆向确证）")
                 }
               >
                 导出 {platform === "sogou"
@@ -988,11 +1026,22 @@ export function App() {
                 type="button"
                 className="export-btn export-all"
                 onClick={exportAll}
-                title="一键导出全部四个出口（搜狗PC/搜狗Android/百度PC/百度Android）"
+                disabled={!versionConfirmed}
+                title={"一键导出全部四个出口（搜狗PC/搜狗Android/百度PC/百度Android）" + (versionConfirmed ? "" : "；需先「确认此版本」")}
               >
                 导出全部
               </button>
             </div>
+
+            {/* UX-003 导出门禁：未确认版本仅供预览（项目文件导出/导回不受限） */}
+            {!versionConfirmed && (
+              <div className="export-gate" data-testid="export-gate">
+                未确认版本仅供预览 —— 点「确认此版本」后可导出正式包（实验包请用 CLI --experimental）
+              </div>
+            )}
+            {confirmHint && (
+              <div className="chat-field-error" role="alert" data-testid="confirm-error">{confirmHint}</div>
+            )}
 
             {/* FR-EXPORT-2：导出前的可读性一键修复（只列 error；修复作为版本节点可回退） */}
             {qaErrors.length > 0 && (

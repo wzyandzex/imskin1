@@ -2,7 +2,7 @@
  * CLI（`imskin`）—— 直接调用本地引擎（零依赖 TS 跑在 Node），供自动化脚本/CI 使用。
  *
  * 用法：
- *   imskin generate "国潮水墨风格，主色墨黑" [--name 名字] [--out dir]   # 生成并导出四出口到目录
+ *   imskin generate "国潮水墨风格，主色墨黑" [--name 名字] [--out dir] [--confirm]   # 生成并导出四出口（未确认→实验包 -experimental）
  *   imskin serve [--port 7317] [--api-key KEY]                          # 启动本地 REST server
  *   imskin feedback <versionId> "候选词字太小"                            # 反馈迭代（配合 serve 状态）
  *
@@ -54,15 +54,30 @@ async function cmdGenerate(args: string[], flags: Record<string, string>): Promi
   const versionId = job.result.versionId;
   console.log(`✔ 生成版本 ${versionId}（${job.result.label}）${job.result.fellBack ? "（LLM 降级为确定性）" : `（LLM: ${job.result.llmProvider}）`}`);
 
+  // UX-003：默认产物为未确认「实验包」（文件名带 -experimental）；--confirm 显式走定稿确认。
+  if (flags.confirm === "true") {
+    try {
+      service.orch.store.confirmVersion(versionId);
+      console.log("  已确认此版本（confirmed）");
+    } catch (e) {
+      console.warn(`  ⚠ 确认失败：${e instanceof Error ? e.message : String(e)}（按实验包导出）`);
+    }
+  }
+  const confirmed = service.orch.store.getVersion(versionId)?.status === "confirmed";
+  const suffix = confirmed ? "" : "-experimental";
+
   if (flags.out) {
     const set = service.export(versionId);
     await mkdir(flags.out, { recursive: true });
     const files: Array<[string, Uint8Array]> = [
-      [`${job.result.label}-sogou-pc.ssf`, set.sogouPc],
-      [`${job.result.label}-sogou-mobile.ssf`, set.sogouMobile],
-      [`${job.result.label}-baidu-pc.bps`, set.baiduPc],
-      [`${job.result.label}-baidu-mobile.bds`, set.baiduMobile],
+      [`${job.result.label}-sogou-pc${suffix}.ssf`, set.sogouPc],
+      [`${job.result.label}-sogou-mobile${suffix}.ssf`, set.sogouMobile],
+      [`${job.result.label}-baidu-pc${suffix}.bps`, set.baiduPc],
+      [`${job.result.label}-baidu-mobile${suffix}.bds`, set.baiduMobile],
     ];
+    if (!confirmed) {
+      console.log("  ⚠ 未确认版本 → 实验包（结构骨架，非可安装正式包；UX-003 / ADR-008）");
+    }
     for (const [name, bytes] of files) {
       await writeFile(join(flags.out, name), bytes);
       console.log(`  导出 ${name}`);
@@ -93,7 +108,7 @@ export async function runCli(argv: string[]): Promise<void> {
     case "":
     case "help":
     case "--help":
-      console.log("用法: imskin generate <想法> [--out dir] | imskin serve [--port 7317] [--api-key KEY]");
+      console.log("用法: imskin generate <想法> [--name 名字] [--out dir] [--confirm] | imskin serve [--port 7317] [--api-key KEY]");
       return;
     default:
       throw new Error(`未知命令: ${cmd}（generate | serve | help）`);
