@@ -328,6 +328,12 @@ export function App() {
   const [dpi, setDpi] = useState<"sd" | "hd" | "uhd">("hd");
   /** 点选反馈（FR-FEEDBACK-5）：点选预览里的元素 + 自然语言。 */
   const [pickedEl, setPickedEl] = useState<PickedElement | null>(null);
+  /**
+   * 试打/标注模式分离（UX-002）：默认试打——预览内点击就是真实输入，点选层不渲染、
+   * 零拦截；开启标注模式后渲染 pick-zone 覆盖层，点击即选反馈目标（移动端友好，
+   * 不依赖右键/Alt）。Alt+点击/右键点选在两种模式下始终可用。
+   */
+  const [pickMode, setPickMode] = useState(false);
   /** 同项目偏好（FR-LEARN-1）：从反馈日志沉淀的可读偏好，仅本项目，可查看/清除。 */
   const [prefs, setPrefs] = useState<string[]>([]);
   /** 参考素材（FR-INPUT-1）：已处理的参考图/视频关键帧，随想法一起送多模态理解。 */
@@ -734,7 +740,8 @@ export function App() {
 
   /** 点选反馈包装：细粒度元素点选（FR-FEEDBACK-5 增强）。
    *  把预览划成多个可点选区：候选词 / 选中候选 / 拼音串 / 字母键 / 功能键 / 键盘背景 / 候选栏背景。
-   *  点选哪块就只改哪块（token 注入反馈文本命中定向修改字段）。 */
+   *  点选哪块就只改哪块（token 注入反馈文本命中定向修改字段）。
+   *  UX-002：覆盖层仅在「标注模式」渲染——试打模式下预览内点击全部交给真实输入。 */
   const withPick = (node: React.ReactNode) => {
     const zones: Array<{ key: keyof typeof PICKABLE; cls: string }> = [
       { key: "candidate-bg", cls: "pz-cand-bg" },
@@ -748,7 +755,7 @@ export function App() {
     return (
       <div className="pick-wrap" data-testid="pick-wrap">
         {node}
-        {zones.map(({ key, cls }) => {
+        {pickMode && zones.map(({ key, cls }) => {
           const el = PICKABLE[key];
           const picked = pickedEl?.label === el.label;
           return (
@@ -943,6 +950,16 @@ export function App() {
               <div className="toolbar-spacer" />
               <button
                 type="button"
+                className={`export-btn${pickMode ? " active" : ""}`}
+                onClick={() => setPickMode((m) => !m)}
+                aria-pressed={pickMode}
+                data-testid="pick-mode-toggle"
+                title="标注模式：点击预览里的元素选择反馈目标（移动端也可用）；关闭后恢复真实试打"
+              >
+                {pickMode ? "退出标注" : "标注反馈"}
+              </button>
+              <button
+                type="button"
                 className={`export-btn${compareMode ? " active" : ""}`}
                 onClick={toggleCompare}
                 title="并排对比两个版本（人在比较中做判断，§6.2）"
@@ -1011,6 +1028,11 @@ export function App() {
               </div>
             ) : (
               <div className={`stage-wrap${device === "mobile" ? " mobile" : ""}`}>
+                {pickMode && (
+                  <div className="pick-mode-hint" data-testid="pick-mode-hint">
+                    标注模式：点击预览里的元素选择反馈目标（物理键盘仍可打字；右键/Alt 点选不受影响）
+                  </div>
+                )}
                 {withPick(renderPreview(currentId, "single"))}
               </div>
             )}

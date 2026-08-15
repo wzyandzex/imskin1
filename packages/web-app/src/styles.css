@@ -868,6 +868,15 @@ body {
   padding: 6px 10px;
 }
 /* 平台状态条（PRE-001）：当前目标徽标 + 状态栏差异 + 模拟项标注 */
+.pick-mode-hint {
+  font-size: 12px;
+  color: #b8860b;
+  background: rgba(184, 134, 11, 0.07);
+  border: 1px dashed rgba(184, 134, 11, 0.4);
+  border-radius: 8px;
+  padding: 5px 10px;
+  margin-bottom: 6px;
+}
 .platform-chrome {
   display: flex;
   align-items: center;
