@@ -263,6 +263,11 @@ export function App() {
   const [phase, setPhase] = useState<IntentPhase>("idle");
   const [draft, setDraft] = useState<IntentDraft | null>(null);
   const [feedback, setFeedback] = useState("");
+  /** 反馈提交状态（UX-004）：busy 防重复提交（ref 同步守卫，state 驱动 UI）；error 可操作；emptyHint 字段级提示空输入。 */
+  const [fbBusy, setFbBusy] = useState(false);
+  const fbBusyRef = useRef(false);
+  const [fbError, setFbError] = useState<string | null>(null);
+  const [fbEmptyHint, setFbEmptyHint] = useState(false);
   const [echo, setEcho] = useState<null | { type: string; scope: string; passed: boolean; picked?: string }>(null);
   /** LLM 接入（多套配置）；llmStatus 记录最近一次生成的来源。 */
   const [modelConfigs, setModelConfigs] = useState<ModelConfigs>(() => loadConfigs());
@@ -518,23 +523,43 @@ export function App() {
 
   const submitFeedback = async () => {
     const text = feedback.trim();
-    if (!text) return;
+    setFbError(null);
+    // UX-004 AC：空输入不静默返回，给字段级提示（不产生版本、不入对话流）。
+    if (!text) {
+      setFbEmptyHint(true);
+      return;
+    }
+    // UX-004 AC：提交进行中忽略重复发送（连点/回车只产生一个 fork）。ref 守卫同步生效，
+    // 不受同一事件批内 state 过期闭包影响。
+    if (fbBusyRef.current) return;
+    fbBusyRef.current = true;
+    setFbEmptyHint(false);
     if (speech.listening) { speech.stop(); setMicTarget(null); }
     // FR-FEEDBACK-5：点选元素时把目标词前置，让定向修改命中正确字段（一次一处）。
     const effective = pickedEl ? `${pickedEl.token}${/^的/.test(text) ? "" : "的"}${text}` : text;
     // 对话流：用户消息入流（点选则标注目标元素）
     pushChat("user", pickedEl ? `【${pickedEl.label}】${text}` : text);
-    // A5 LLM 增强：配了模型则用 understandFeedback 语义增强（失败自动走确定性）。
-    const fb = await orch.applyFeedbackSmart(currentId, effective);
-    setCurrentId(fb.version.id);
-    const echoObj = { type: fb.classification.type, scope: fb.route.scope, passed: fb.design.qa.passed, picked: pickedEl?.label };
-    setEcho(echoObj);
-    pushChat("sys", `已听懂「${FB_LABEL[echoObj.type] ?? echoObj.type}」${echoObj.picked ? `（针对 ${echoObj.picked}）` : ""} · 本版自检${echoObj.passed ? "通过" : "有问题"}`);
-    learnPref(effective); // FR-LEARN-1：沉淀同项目偏好
-    setFeedback("");
-    setPickedEl(null);
-    refresh();
-    persist(fb.version.id);
+    setFbBusy(true);
+    try {
+      // A5 LLM 增强：配了模型则用 understandFeedback 语义增强（失败自动走确定性）。
+      const fb = await orch.applyFeedbackSmart(currentId, effective);
+      setCurrentId(fb.version.id);
+      const echoObj = { type: fb.classification.type, scope: fb.route.scope, passed: fb.design.qa.passed, picked: pickedEl?.label };
+      setEcho(echoObj);
+      pushChat("sys", `已听懂「${FB_LABEL[echoObj.type] ?? echoObj.type}」${echoObj.picked ? `（针对 ${echoObj.picked}）` : ""} · 本版自检${echoObj.passed ? "通过" : "有问题"}`);
+      learnPref(effective); // FR-LEARN-1：沉淀同项目偏好
+      setFeedback("");
+      setPickedEl(null);
+      persist(fb.version.id);
+    } catch (err) {
+      // UX-004 AC：异常不静默——输入与点选保留，用户可直接重试；不产生半成品版本。
+      console.error("[feedback] 提交失败", err);
+      setFbError("这条反馈处理失败了，输入已保留，请再点一次发送重试；若持续失败，可先重置对话再提。");
+    } finally {
+      fbBusyRef.current = false;
+      setFbBusy(false);
+      refresh();
+    }
   };
 
   const chatSeq = useRef(0);
@@ -1121,9 +1146,14 @@ export function App() {
                 <div className="chat-input-row">
                   <input
                     value={feedback}
-                    onChange={(e) => setFeedback(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && submitFeedback()}
+                    onChange={(e) => {
+                      setFeedback(e.target.value);
+                      if (fbEmptyHint) setFbEmptyHint(false);
+                      if (fbError) setFbError(null);
+                    }}
+                    onKeyDown={(e) => e.key === "Enter" && !fbBusy && submitFeedback()}
                     placeholder={pickedEl ? `说说「${pickedEl.label}」哪里不对` : "提意见迭代，如「候选词字太小」"}
+                    aria-invalid={fbEmptyHint || !!fbError}
                     data-testid="feedback-input"
                   />
                   <Tooltip label={speech.supported ? (speech.listening && micTarget === "feedback" ? "停止听写" : "语音提意见") : "当前浏览器不支持语音输入，请打字"}>
@@ -1136,8 +1166,15 @@ export function App() {
                       aria-label="语音输入反馈"
                     >🎤</button>
                   </Tooltip>
-                  <button type="button" className="gen-btn ghost" onClick={submitFeedback}>发送</button>
+                  <button type="button" className="gen-btn ghost" onClick={submitFeedback} disabled={fbBusy} aria-busy={fbBusy} data-testid="feedback-send">
+                    {fbBusy ? "发送中…" : "发送"}
+                  </button>
                 </div>
+                {(fbEmptyHint || fbError) && (
+                  <div className="chat-field-error" role="alert" data-testid="feedback-field-error">
+                    {fbEmptyHint ? "说点什么吧：描述要改哪里，如「候选词字太小」。" : fbError}
+                  </div>
+                )}
                 <div className="chat-footer">
                   <ModelSwitcher
                     mc={modelConfigs}
