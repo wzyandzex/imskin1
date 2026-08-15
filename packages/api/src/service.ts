@@ -12,8 +12,13 @@
 import { SkinOrchestrator } from "@imskin/orchestrator";
 import { understandIntent, type LLMRegistry } from "@imskin/llm-core";
 import type { DesignBrief } from "@imskin/skin-gen";
+import { OUTLET_API_KEYS, type Outlet } from "@imskin/contracts";
 
-export type OutletKey = "sogouPc" | "sogouMobile" | "baiduPc" | "baiduMobile";
+/**
+ * REST 出口键从领域契约派生（DOM-001）：传输层保留 camelCase 兼容既有端点，
+ * 但取值集合与 docs/01 §3.1 的 Outlet 一一对应，不再本地自造 union。
+ */
+export type OutletKey = (typeof OUTLET_API_KEYS)[Outlet];
 
 export interface GenerateJobInput {
   /** 模糊想法（优先）或直接给 DesignBrief。 */

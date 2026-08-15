@@ -8,6 +8,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@imskin/contracts": "*",
     "@imskin/skin-gen": "*",
     "@imskin/feedback-core": "*",
     "@imskin/qa-core": "*",

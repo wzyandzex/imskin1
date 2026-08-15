@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@imskin/contracts": "*",
     "@imskin/pinyin-engine": "*",
     "@imskin/skin-gen": "*",
     "@imskin/orchestrator": "*",

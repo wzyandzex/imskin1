@@ -1,0 +1,16 @@
+{
+  "name": "@imskin/contracts",
+  "version": "0.0.0",
+  "description": "IMSkin 跨包领域契约 —— Outlet / DeliveryLevel / Diagnostic / PackageArtifact / ChangeInstruction（类型 + 运行时 parser，零依赖）",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

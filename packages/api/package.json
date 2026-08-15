@@ -11,6 +11,7 @@
     "imskin": "./src/cli.ts"
   },
   "dependencies": {
+    "@imskin/contracts": "*",
     "@imskin/orchestrator": "*",
     "@imskin/llm-core": "*",
     "@imskin/skin-gen": "*",
