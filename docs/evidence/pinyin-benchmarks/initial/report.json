@@ -1,0 +1,627 @@
+{
+  "benchmarkVersion": "1.0.0",
+  "generatedAt": "2026-08-15T17:24:40.049Z",
+  "dataset": {
+    "seedDictKeys": 53,
+    "commonCorpus": 60
+  },
+  "engine": {
+    "dictImpl": "SeedDict",
+    "dictSize": 234,
+    "mode": "production-default"
+  },
+  "environment": {
+    "node": "v24.13.0",
+    "platform": "win32",
+    "cpu": "AMD Ryzen 7 5800H with Radeon Graphics         "
+  },
+  "qwerty": {
+    "seedDict": {
+      "samples": 53,
+      "top1": 52,
+      "top3": 52,
+      "noCandidate": 0,
+      "missesTop3": [
+        {
+          "word": "西安",
+          "input": "xian",
+          "got": "先/现/线"
+        }
+      ],
+      "top1Rate": 0.9811,
+      "top3Rate": 0.9811
+    },
+    "common60": {
+      "samples": 60,
+      "top1": 5,
+      "top3": 5,
+      "noCandidate": 47,
+      "missesTop3": [
+        {
+          "word": "今天",
+          "input": "jitian",
+          "got": ""
+        },
+        {
+          "word": "明天",
+          "input": "mingtian",
+          "got": ""
+        },
+        {
+          "word": "昨天",
+          "input": "zuotian",
+          "got": ""
+        },
+        {
+          "word": "现在",
+          "input": "xianzai",
+          "got": "先/现/线"
+        },
+        {
+          "word": "工作",
+          "input": "gongzuo",
+          "got": ""
+        },
+        {
+          "word": "学习",
+          "input": "xuexi",
+          "got": ""
+        },
+        {
+          "word": "学校",
+          "input": "xuexiao",
+          "got": ""
+        },
+        {
+          "word": "学生",
+          "input": "xuesheng",
+          "got": ""
+        },
+        {
+          "word": "老师",
+          "input": "laoshi",
+          "got": ""
+        },
+        {
+          "word": "他们",
+          "input": "tamen",
+          "got": ""
+        },
+        {
+          "word": "什么",
+          "input": "shenme",
+          "got": ""
+        },
+        {
+          "word": "怎么",
+          "input": "zenme",
+          "got": ""
+        },
+        {
+          "word": "因为",
+          "input": "yinwei",
+          "got": "音/因/银"
+        },
+        {
+          "word": "但是",
+          "input": "danshi",
+          "got": ""
+        },
+        {
+          "word": "所以",
+          "input": "suoyi",
+          "got": ""
+        },
+        {
+          "word": "如果",
+          "input": "ruguo",
+          "got": "入/如/儒"
+        },
+        {
+          "word": "可是",
+          "input": "keshi",
+          "got": ""
+        },
+        {
+          "word": "而且",
+          "input": "erqie",
+          "got": ""
+        },
+        {
+          "word": "喜欢",
+          "input": "xihuan",
+          "got": ""
+        },
+        {
+          "word": "想要",
+          "input": "xiangyao",
+          "got": "想/向/相"
+        },
+        {
+          "word": "需要",
+          "input": "xuyao",
+          "got": ""
+        },
+        {
+          "word": "可以",
+          "input": "keyi",
+          "got": ""
+        },
+        {
+          "word": "应该",
+          "input": "yinggai",
+          "got": ""
+        },
+        {
+          "word": "知道",
+          "input": "zhidao",
+          "got": ""
+        },
+        {
+          "word": "觉得",
+          "input": "juede",
+          "got": ""
+        },
+        {
+          "word": "开始",
+          "input": "kaishi",
+          "got": ""
+        },
+        {
+          "word": "结束",
+          "input": "jieshu",
+          "got": ""
+        },
+        {
+          "word": "等待",
+          "input": "dengdai",
+          "got": ""
+        },
+        {
+          "word": "希望",
+          "input": "xiwang",
+          "got": ""
+        },
+        {
+          "word": "梦想",
+          "input": "mengxiang",
+          "got": ""
+        },
+        {
+          "word": "生活",
+          "input": "shenghuo",
+          "got": ""
+        },
+        {
+          "word": "手机",
+          "input": "shouji",
+          "got": ""
+        },
+        {
+          "word": "电话",
+          "input": "dianhua",
+          "got": ""
+        },
+        {
+          "word": "电脑",
+          "input": "diannao",
+          "got": ""
+        },
+        {
+          "word": "键盘",
+          "input": "jianpan",
+          "got": ""
+        },
+        {
+          "word": "鼠标",
+          "input": "shubiao",
+          "got": "书/数/术"
+        },
+        {
+          "word": "屏幕",
+          "input": "pingmu",
+          "got": ""
+        },
+        {
+          "word": "音乐",
+          "input": "yinyue",
+          "got": "音/因/银"
+        },
+        {
+          "word": "电影",
+          "input": "dianying",
+          "got": ""
+        },
+        {
+          "word": "游戏",
+          "input": "youxi",
+          "got": ""
+        },
+        {
+          "word": "吃饭",
+          "input": "chifan",
+          "got": "吃/迟/持"
+        },
+        {
+          "word": "睡觉",
+          "input": "shuijiao",
+          "got": ""
+        },
+        {
+          "word": "走路",
+          "input": "zoulu",
+          "got": ""
+        },
+        {
+          "word": "跑步",
+          "input": "paobu",
+          "got": ""
+        },
+        {
+          "word": "喝茶",
+          "input": "hecha",
+          "got": "喝/和/河"
+        },
+        {
+          "word": "咖啡",
+          "input": "kafei",
+          "got": ""
+        },
+        {
+          "word": "地铁",
+          "input": "ditie",
+          "got": ""
+        },
+        {
+          "word": "公交",
+          "input": "gongjiao",
+          "got": ""
+        },
+        {
+          "word": "飞机",
+          "input": "feiji",
+          "got": ""
+        },
+        {
+          "word": "火车",
+          "input": "huoche",
+          "got": ""
+        },
+        {
+          "word": "早上",
+          "input": "zaoshang",
+          "got": ""
+        },
+        {
+          "word": "晚上",
+          "input": "wanshang",
+          "got": ""
+        },
+        {
+          "word": "天气",
+          "input": "tianqi",
+          "got": ""
+        },
+        {
+          "word": "下雨",
+          "input": "xiayu",
+          "got": ""
+        },
+        {
+          "word": "太阳",
+          "input": "taiyang",
+          "got": ""
+        }
+      ],
+      "top1Rate": 0.0833,
+      "top3Rate": 0.0833,
+      "noCandidateRate": 0.7833
+    }
+  },
+  "t9": {
+    "common60": {
+      "samples": 60,
+      "top1": 5,
+      "top3": 5,
+      "noCandidate": 26,
+      "missesTop3": [
+        {
+          "word": "今天",
+          "input": "jitian",
+          "got": ""
+        },
+        {
+          "word": "明天",
+          "input": "mingtian",
+          "got": "你/呢/泥"
+        },
+        {
+          "word": "昨天",
+          "input": "zuotian",
+          "got": ""
+        },
+        {
+          "word": "现在",
+          "input": "xianzai",
+          "got": "先/现/线"
+        },
+        {
+          "word": "工作",
+          "input": "gongzuo",
+          "got": ""
+        },
+        {
+          "word": "学习",
+          "input": "xuexi",
+          "got": ""
+        },
+        {
+          "word": "学校",
+          "input": "xuexiao",
+          "got": ""
+        },
+        {
+          "word": "学生",
+          "input": "xuesheng",
+          "got": ""
+        },
+        {
+          "word": "老师",
+          "input": "laoshi",
+          "got": "看/刊/砍"
+        },
+        {
+          "word": "他们",
+          "input": "tamen",
+          "got": ""
+        },
+        {
+          "word": "什么",
+          "input": "shenme",
+          "got": ""
+        },
+        {
+          "word": "怎么",
+          "input": "zenme",
+          "got": "文/问/温"
+        },
+        {
+          "word": "因为",
+          "input": "yinwei",
+          "got": "音/因/银"
+        },
+        {
+          "word": "但是",
+          "input": "danshi",
+          "got": "大/法/打"
+        },
+        {
+          "word": "所以",
+          "input": "suoyi",
+          "got": "入/如/儒"
+        },
+        {
+          "word": "如果",
+          "input": "ruguo",
+          "got": "入/如/儒"
+        },
+        {
+          "word": "可是",
+          "input": "keshi",
+          "got": "了/乐/勒"
+        },
+        {
+          "word": "而且",
+          "input": "erqie",
+          "got": ""
+        },
+        {
+          "word": "喜欢",
+          "input": "xihuan",
+          "got": "字/子/自"
+        },
+        {
+          "word": "想要",
+          "input": "xiangyao",
+          "got": "想/向/相"
+        },
+        {
+          "word": "需要",
+          "input": "xuyao",
+          "got": ""
+        },
+        {
+          "word": "可以",
+          "input": "keyi",
+          "got": "了/乐/勒"
+        },
+        {
+          "word": "应该",
+          "input": "yinggai",
+          "got": "行/星/型"
+        },
+        {
+          "word": "知道",
+          "input": "zhidao",
+          "got": "字/子/自"
+        },
+        {
+          "word": "觉得",
+          "input": "juede",
+          "got": ""
+        },
+        {
+          "word": "开始",
+          "input": "kaishi",
+          "got": ""
+        },
+        {
+          "word": "结束",
+          "input": "jieshu",
+          "got": ""
+        },
+        {
+          "word": "等待",
+          "input": "dengdai",
+          "got": "的/得/德"
+        },
+        {
+          "word": "希望",
+          "input": "xiwang",
+          "got": "字/子/自"
+        },
+        {
+          "word": "梦想",
+          "input": "mengxiang",
+          "got": "呢/哦/噢"
+        },
+        {
+          "word": "生活",
+          "input": "shenghuo",
+          "got": ""
+        },
+        {
+          "word": "手机",
+          "input": "shouji",
+          "got": "拼/频/品"
+        },
+        {
+          "word": "电话",
+          "input": "dianhua",
+          "got": ""
+        },
+        {
+          "word": "电脑",
+          "input": "diannao",
+          "got": ""
+        },
+        {
+          "word": "键盘",
+          "input": "jianpan",
+          "got": ""
+        },
+        {
+          "word": "鼠标",
+          "input": "shubiao",
+          "got": "书/数/术"
+        },
+        {
+          "word": "屏幕",
+          "input": "pingmu",
+          "got": "拼/频/品"
+        },
+        {
+          "word": "音乐",
+          "input": "yinyue",
+          "got": "音/因/银"
+        },
+        {
+          "word": "电影",
+          "input": "dianying",
+          "got": ""
+        },
+        {
+          "word": "游戏",
+          "input": "youxi",
+          "got": "我/握/卧"
+        },
+        {
+          "word": "吃饭",
+          "input": "chifan",
+          "got": "吃/迟/持"
+        },
+        {
+          "word": "睡觉",
+          "input": "shuijiao",
+          "got": "书/数/术"
+        },
+        {
+          "word": "走路",
+          "input": "zoulu",
+          "got": "我/握/卧"
+        },
+        {
+          "word": "跑步",
+          "input": "paobu",
+          "got": ""
+        },
+        {
+          "word": "喝茶",
+          "input": "hecha",
+          "got": "喝/和/河"
+        },
+        {
+          "word": "咖啡",
+          "input": "kafei",
+          "got": ""
+        },
+        {
+          "word": "地铁",
+          "input": "ditie",
+          "got": ""
+        },
+        {
+          "word": "公交",
+          "input": "gongjiao",
+          "got": ""
+        },
+        {
+          "word": "飞机",
+          "input": "feiji",
+          "got": "的/得/德"
+        },
+        {
+          "word": "火车",
+          "input": "huoche",
+          "got": "国/过/果"
+        },
+        {
+          "word": "早上",
+          "input": "zaoshang",
+          "got": ""
+        },
+        {
+          "word": "晚上",
+          "input": "wanshang",
+          "got": ""
+        },
+        {
+          "word": "天气",
+          "input": "tianqi",
+          "got": ""
+        },
+        {
+          "word": "下雨",
+          "input": "xiayu",
+          "got": "字/子/自"
+        },
+        {
+          "word": "太阳",
+          "input": "taiyang",
+          "got": ""
+        }
+      ],
+      "top1Rate": 0.0833,
+      "top3Rate": 0.0833
+    }
+  },
+  "latency": {
+    "samples": 1024,
+    "p50ms": 0.009,
+    "p95ms": 0.028,
+    "p99ms": 0.074,
+    "maxMs": 0.587
+  },
+  "thresholds": {
+    "seedTop3": 0.95,
+    "commonTop1": 0.8,
+    "commonNoCandidate": 0.1,
+    "latencyP95ms": 50
+  },
+  "verdicts": {
+    "seedTop3Pass": true,
+    "commonTop1Pass": false,
+    "commonNoCandidatePass": false,
+    "latencyP95Pass": true
+  }
+}

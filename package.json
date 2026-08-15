@@ -11,6 +11,7 @@
     "test": "npm run test --workspaces --if-present",
     "test:node": "node --test packages/{pinyin-engine,skin-gen,project-model,feedback-core,qa-core,zip,sogou-adapter,sogou-mobile-adapter,baidu-pc-adapter,baidu-mobile-adapter,orchestrator,llm-core,api}/test/*.test.ts",
     "test:web": "vitest run --root packages/web-app",
+    "bench:pinyin": "node packages/pinyin-engine/bench/run.ts",
     "typecheck": "npm run typecheck -w @imskin/web-app",
     "build": "npm run build -w @imskin/web-app",
     "verify": "npm run typecheck && npm test && npm run build",

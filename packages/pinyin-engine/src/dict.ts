@@ -165,3 +165,6 @@ export class SeedDict implements Dict {
 
 /** 默认种子词库单例。 */
 export const seedDict = new SeedDict();
+
+/** 诊断/基准用：种子词库原始数据的只读视图（键为音节序列键，值为按常用度排序的词表）。 */
+export const seedData: Readonly<Record<string, string>> = SEED;

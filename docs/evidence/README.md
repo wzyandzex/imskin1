@@ -12,21 +12,14 @@ performance/<date>-<env>/             # 性能基准报告
 security/<date>-<scope>/              # 安全测试记录
 ```
 
-## 当前状态（2026-08-15）
+## 当前状态（2026-08-16）
 
-**本目录尚无任何已归档证据。**
+- `pinyin-benchmarks/initial/` —— **已有**（PINYIN-001 基准基线：引擎自检 98.1% ✅ / 日常 60 词 8.3% ❌ gap / 延迟 0.028ms ✅）。
+- `outlets/*`：仍无任何安装验证证据——四出口均为 `structural`，无一达到 `previewable / install_candidate / install_verified`。
 
-这意味着：
+第一份安装证据目标（按 `docs/06-路线图`）：
 
-- 四个出口均为 `structural`，无一达到 `previewable / install_candidate / install_verified`；
-- 不存在真实客户端安装记录；
-- 不存在词库覆盖率基准；
-- 不存在性能/安全基准报告。
-
-第一份证据目标（按 `docs/06-路线图`）：
-
-1. `outlets/sogou-pc/<version>/` —— EVID-001 产出；
-2. `pinyin-benchmarks/initial/` —— PINYIN-001 产出。
+1. `outlets/sogou-pc/<version>/` —— EVID-001 产出。
 
 ## 新增证据检查表
 
