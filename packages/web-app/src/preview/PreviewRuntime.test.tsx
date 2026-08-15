@@ -155,6 +155,68 @@ describe("PreviewRuntime 真实交互", () => {
     expect(within(screen.getByTestId("candidate-bar")).getByText("我")).toBeTruthy();
   });
 
+  test("符号面板（UX-001）：点「符」切面板 → 点「！」字面插入 → 「返回」回到拼音键盘可继续打字", async () => {
+    const user = userEvent.setup();
+    render(<PreviewRuntime skin={coolMinimal} />);
+    const kb = screen.getByTestId("vkeyboard");
+
+    await user.click(within(kb).getByRole("button", { name: "符" }));
+    // 面板特征：符号键出现、字母键消失
+    expect(within(kb).getByText("！")).toBeTruthy();
+    expect(kb.querySelector('[data-key="q"]')).toBeNull();
+
+    await user.click(within(kb).getByRole("button", { name: "！" }));
+    expect(committed()).toBe("！");
+
+    await user.click(within(kb).getByRole("button", { name: "返回" }));
+    expect(kb.querySelector('[data-key="q"]')).toBeTruthy();
+
+    // 返回后拼音输入仍可用（回归：面板不破坏会话）
+    for (const ch of "wo") {
+      await user.click(kb.querySelector(`[data-key="${ch}"]`) as HTMLElement);
+    }
+    const chip = within(screen.getByTestId("candidate-bar")).getByText("我").closest("button")!;
+    await user.click(chip);
+    expect(committed()).toBe("！我");
+  });
+
+  test("数字面板（UX-001）：点「123」→ 点「7」插入 → 符号面板内可互切到数字面板", async () => {
+    const user = userEvent.setup();
+    render(<PreviewRuntime skin={coolMinimal} />);
+    const kb = screen.getByTestId("vkeyboard");
+
+    await user.click(within(kb).getByRole("button", { name: "123" }));
+    expect(kb.querySelector('[data-key="q"]')).toBeNull();
+
+    await user.click(within(kb).getByRole("button", { name: /^7$/ }));
+    expect(committed()).toBe("7");
+
+    // 符号面板底行也有「123」，面板间互切
+    await user.click(within(kb).getByRole("button", { name: "符" }));
+    await user.click(within(kb).getByRole("button", { name: "123" }));
+    await user.click(within(kb).getByRole("button", { name: /^0$/ }));
+    expect(committed()).toBe("70");
+
+    await user.click(within(kb).getByRole("button", { name: "返回" }));
+    expect(kb.querySelector('[data-key="q"]')).toBeTruthy();
+  });
+
+  test("T9 下符号面板可用（UX-001）：九宫格点「符」→ 插入「，」→ 返回仍是九宫格", async () => {
+    const user = userEvent.setup();
+    render(<PreviewRuntime skin={coolMinimal} device="mobile" initialMode="t9" />);
+    const kb = screen.getByTestId("vkeyboard");
+    expect(within(kb).getByText("abc")).toBeTruthy();
+
+    await user.click(within(kb).getByRole("button", { name: "符" }));
+    await user.click(within(kb).getByRole("button", { name: "，" }));
+    expect(committed()).toBe("，");
+
+    await user.click(within(kb).getByRole("button", { name: "返回" }));
+    // 回到九宫格（字母组特征仍在）
+    expect(within(kb).getByText("abc")).toBeTruthy();
+    expect(within(kb).getByText("wxyz")).toBeTruthy();
+  });
+
   test("位图皮肤：键盘与候选栏 image 背景各渲染九宫格 Canvas 层，且不影响输入（§4.7）", async () => {
     const user = userEvent.setup();
     const imgFill = { type: "image" as const, src: "data:image/png;base64,iVBORw0KGgo=", slice: { top: 8, right: 8, bottom: 8, left: 8 } };

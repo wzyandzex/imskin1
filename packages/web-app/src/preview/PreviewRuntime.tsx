@@ -12,7 +12,7 @@ import type { SkinManifest } from "@imskin/skin-gen";
 import { CandidateBar } from "./CandidateBar.tsx";
 import { VirtualKeyboard } from "./VirtualKeyboard.tsx";
 import { layoutFor } from "./layouts.ts";
-import { dispatch, type KeyAction } from "./actions.ts";
+import { dispatch, type KeyAction, type PanelKind } from "./actions.ts";
 import { KeySound } from "./sound.ts";
 
 interface Props {
@@ -43,9 +43,18 @@ export function PreviewRuntime({ skin, device = "pc", soundEnabled = false, init
   const [, setTick] = useState(0);
   const rerender = useCallback(() => setTick((t) => t + 1), []);
 
+  // 面板状态（符号/数字面板与 session 的拼音模式正交）：dispatch 对 panel 动作返回 false，
+  // 由本层消化——切换面板不触碰拼音会话，返回拼音后组合缓冲原样保留。
+  const [panel, setPanel] = useState<PanelKind>("pinyin");
+
   const run = useCallback(
     (action: KeyAction) => {
       soundRef.current?.playClick(action.type === "input" || action.type === "select" ? "normal" : "special");
+      if (action.type === "panel") {
+        setPanel(action.value);
+        rerender();
+        return;
+      }
       dispatch(session, action);
       rerender();
     },
@@ -136,7 +145,7 @@ export function PreviewRuntime({ skin, device = "pc", soundEnabled = false, init
         pickedLabel={pickedLabel}
       />
 
-      <VirtualKeyboard layout={layoutFor(view.mode)} style={skin.keyboard} onAction={run} onPickElement={onPickElement} pickedLabel={pickedLabel} />
+      <VirtualKeyboard layout={layoutFor(view.mode, panel)} style={skin.keyboard} onAction={run} onPickElement={onPickElement} pickedLabel={pickedLabel} />
     </div>
   );
 }
