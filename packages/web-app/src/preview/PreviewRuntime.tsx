@@ -9,16 +9,20 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { InputSession, type InputMode } from "@imskin/pinyin-engine";
 import type { SkinManifest } from "@imskin/skin-gen";
+import type { Outlet } from "@imskin/contracts";
 import { CandidateBar } from "./CandidateBar.tsx";
 import { VirtualKeyboard } from "./VirtualKeyboard.tsx";
 import { layoutFor } from "./layouts.ts";
 import { dispatch, type KeyAction, type PanelKind } from "./actions.ts";
 import { KeySound } from "./sound.ts";
+import { profileFor } from "./profiles.ts";
 
 interface Props {
   skin: SkinManifest;
   /** 预览设备形态：pc（默认）或 mobile（竖屏手机键盘，更大触控目标 + 按键音）。 */
   device?: "pc" | "mobile";
+  /** 预览目标出口（PRE-001）：加载平台 PreviewProfile（状态栏差异 + 模拟项标注）。 */
+  outlet?: Outlet;
   /** 是否开启按键音（仅在支持 Web Audio 时生效）。 */
   soundEnabled?: boolean;
   /** 会话初始输入模式：qwerty=26 键全键盘（默认）或 t9=九宫格。移动端默认 t9。 */
@@ -29,7 +33,8 @@ interface Props {
   pickedLabel?: string | null;
 }
 
-export function PreviewRuntime({ skin, device = "pc", soundEnabled = false, initialMode = "qwerty", onPickElement, pickedLabel }: Props) {
+export function PreviewRuntime({ skin, device = "pc", outlet = "sogou_pc", soundEnabled = false, initialMode = "qwerty", onPickElement, pickedLabel }: Props) {
+  const profile = profileFor(outlet);
   const sessionRef = useRef<InputSession | null>(null);
   if (sessionRef.current === null) sessionRef.current = new InputSession({ mode: initialMode });
   const session = sessionRef.current;
@@ -127,6 +132,25 @@ export function PreviewRuntime({ skin, device = "pc", soundEnabled = false, init
           {inlineComposing && <span className="inline-composing">{inlineComposing}</span>}
           <span className="caret" />
         </div>
+      </div>
+
+      {/* 平台状态条（PRE-001）：当前目标徽标 + 状态栏差异 + 模拟项诚实标注 */}
+      <div className="platform-chrome" data-testid="platform-chrome" aria-label={`当前预览目标：${profile.label}`}>
+        <span className="pc-outlet" data-testid="outlet-badge">{profile.label}</span>
+        <span className="pc-status" title={profile.candidateNote}>
+          {profile.statusItems.map((s) => (
+            <span key={s} className="pc-status-item">{s}</span>
+          ))}
+        </span>
+        {profile.simulated.length > 0 && (
+          <span
+            className="pc-sim"
+            data-testid="platform-sim"
+            title={profile.simulated.join("；")}
+          >
+            模拟项 {profile.simulated.length}
+          </span>
+        )}
       </div>
 
       <CandidateBar

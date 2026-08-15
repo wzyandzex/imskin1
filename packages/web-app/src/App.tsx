@@ -8,6 +8,7 @@
 
 import { useRef, useState } from "react";
 import { SkinOrchestrator } from "@imskin/orchestrator";
+import { outletFromParts } from "@imskin/contracts";
 import { ProjectStore, type Project, type ProjectStoreSnapshot } from "@imskin/project-model";
 import {
   EXAMPLE_BRIEFS,
@@ -768,6 +769,8 @@ export function App() {
   };
 
   // 渲染某个版本的预览（PC/手机），每个实例自带独立输入会话，可各自打字互不影响。
+  // PRE-001：平台×设备组合成 Outlet 传入预览（领域枚举来自 @imskin/contracts）。
+  const outlet = outletFromParts(platform, device === "pc" ? "pc" : "android") ?? "sogou_pc";
   const renderPreview = (versionId: string, suffix: string) => {
     const s = skinOf(versionId);
     return device === "mobile" ? (
@@ -776,6 +779,7 @@ export function App() {
           key={`${versionId}-${platform}-${themeMode}-${dpi}-${suffix}`}
           skin={s}
           device="mobile"
+          outlet={outlet}
           soundEnabled={sound}
           initialMode="t9" // 移动端默认九宫格 T9
           onPickElement={onPickElement}
@@ -787,6 +791,7 @@ export function App() {
         key={`${versionId}-${platform}-${themeMode}-${suffix}`}
         skin={s}
         device="pc"
+        outlet={outlet}
         onPickElement={onPickElement}
         pickedLabel={pickedEl?.label ?? null}
       />
