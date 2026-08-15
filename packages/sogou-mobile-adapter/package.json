@@ -1,0 +1,17 @@
+{
+  "name": "@imskin/sogou-mobile-adapter",
+  "version": "0.0.0",
+  "description": "搜狗 Android 皮肤适配层：.ssf 容器（store zip）+ phoneTheme.ini/theme/layout/res 生成器（架构 §2.4→Android）",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@imskin/zip": "*"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.ts"
+  },
+  "license": "UNLICENSED"
+}

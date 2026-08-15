@@ -1,0 +1,14 @@
+{
+  "name": "@imskin/skin-gen",
+  "version": "0.0.0",
+  "description": "皮肤生成核心：设计简报 → 视觉 token → SkinManifest（含可读性 QA），预览与适配层共用的皮肤契约",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.ts"
+  },
+  "license": "UNLICENSED"
+}

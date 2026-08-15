@@ -1,0 +1,14 @@
+{
+  "name": "@imskin/qa-core",
+  "version": "0.0.0",
+  "description": "A6 发布前校验：可读性对比度、跨出口一致性等硬性质量闸门（架构 §3.4 / 需求 FR-QA）",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.ts"
+  },
+  "license": "UNLICENSED"
+}

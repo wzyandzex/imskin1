@@ -1,0 +1,17 @@
+{
+  "name": "@imskin/llm-core",
+  "version": "0.0.0",
+  "description": "LLM 接入层：provider 注册表 + OpenAI 兼容默认 + 结构化输出（JSON schema）+ 降级链（LLM 失败回退确定性启发式）。用户可接自己的模型（OpenAI 兼容 endpoint / Ollama 本地）。",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@imskin/skin-gen": "*"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.ts"
+  },
+  "license": "UNLICENSED"
+}

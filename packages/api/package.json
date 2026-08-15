@@ -1,0 +1,23 @@
+{
+  "name": "@imskin/api",
+  "version": "0.0.0",
+  "description": "自动化 API：把皮肤生成能力以 REST（本地 HTTP server，零依赖 node:http）+ CLI + 编程接口开放给用户的自动化工具。认证 Bearer token、批量生成、异步任务（job 轮询）、四出口导出。",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "bin": {
+    "imskin": "./src/cli.ts"
+  },
+  "dependencies": {
+    "@imskin/orchestrator": "*",
+    "@imskin/llm-core": "*",
+    "@imskin/skin-gen": "*",
+    "@imskin/project-model": "*"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.ts"
+  },
+  "license": "UNLICENSED"
+}

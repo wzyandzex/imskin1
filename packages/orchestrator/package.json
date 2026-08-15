@@ -1,0 +1,25 @@
+{
+  "name": "@imskin/orchestrator",
+  "version": "0.0.0",
+  "description": "智能体编排层：把 A1..A6（意图→规格→皮肤→校验→版本树→定向反馈重跑→四出口导出）用结构化契约串起来，含溯源与最小重跑",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@imskin/skin-gen": "*",
+    "@imskin/feedback-core": "*",
+    "@imskin/qa-core": "*",
+    "@imskin/project-model": "*",
+    "@imskin/sogou-adapter": "*",
+    "@imskin/baidu-mobile-adapter": "*",
+    "@imskin/baidu-pc-adapter": "*",
+    "@imskin/sogou-mobile-adapter": "*",
+    "@imskin/zip": "*"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.ts"
+  },
+  "license": "UNLICENSED"
+}

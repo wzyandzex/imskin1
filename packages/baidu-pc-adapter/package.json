@@ -1,0 +1,17 @@
+{
+  "name": "@imskin/baidu-pc-adapter",
+  "version": "0.0.0",
+  "description": "百度 PC 皮肤适配层：.bps 容器（deflate zip）+ skin.ini(Skin.xml)/Candidate/Status 布局生成器（架构 §2.2）",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@imskin/zip": "*"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.ts"
+  },
+  "license": "UNLICENSED"
+}

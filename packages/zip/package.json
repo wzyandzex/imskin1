@@ -1,0 +1,14 @@
+{
+  "name": "@imskin/zip",
+  "version": "0.0.0",
+  "description": "零依赖 store 方式 ZIP 打包/解析 + CRC-32 + 字节工具，供各皮肤适配器打容器（.ssf/.bds 等 = zip）",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.ts"
+  },
+  "license": "UNLICENSED"
+}

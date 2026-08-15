@@ -1,0 +1,14 @@
+{
+  "name": "@imskin/project-model",
+  "version": "0.0.0",
+  "description": "皮肤项目的版本树与状态模型：Project / Version（非线性版本树）/ SatisfactionMark，含分叉、血缘、元素级合并与满意标记（架构 §5.5 / §7.1）",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.ts"
+  },
+  "license": "UNLICENSED"
+}

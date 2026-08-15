@@ -1,0 +1,16 @@
+{
+  "name": "imskin",
+  "private": true,
+  "version": "0.0.0",
+  "description": "输入法皮肤智能体系统 — 生成搜狗/百度 PC 与移动端皮肤，实时预览与多轮反馈迭代",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "npm run test --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

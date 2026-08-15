@@ -1,0 +1,14 @@
+{
+  "name": "@imskin/feedback-core",
+  "version": "0.0.0",
+  "description": "A5 反馈解析：自然语言反馈 → 分类 → 路由 → 定向最小修改（架构 §5.3 / §5.4）",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.ts"
+  },
+  "license": "UNLICENSED"
+}

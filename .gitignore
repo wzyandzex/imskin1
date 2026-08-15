@@ -1,0 +1,23 @@
+# 依赖与构建产物
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+.npm-cache/
+
+# 日志与临时文件
+*.log
+.DS_Store
+Thumbs.db
+/tmp/
+
+# 生成的皮肤产物 / 资产版本库（运行时产物，不入库）
+/artifacts/
+/.cache/
+
+# 环境
+.env
+.env.local
+
+# 本地 agent 会话文件
+.zcode/

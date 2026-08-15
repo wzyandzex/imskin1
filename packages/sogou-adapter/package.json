@@ -1,0 +1,18 @@
+{
+  "name": "@imskin/sogou-adapter",
+  "version": "0.0.0",
+  "description": "搜狗 PC 皮肤适配层：.ssf 容器（store 方式 zip 改后缀）+ skin.ini 生成器（架构 §2.1）",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./encrypt": "./src/encrypt.ts"
+  },
+  "dependencies": {
+    "@imskin/zip": "*"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.ts"
+  },
+  "license": "UNLICENSED"
+}
