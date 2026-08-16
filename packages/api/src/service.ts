@@ -12,7 +12,7 @@
 import { SkinOrchestrator } from "@imskin/orchestrator";
 import { understandIntent, type LLMRegistry } from "@imskin/llm-core";
 import type { DesignBrief } from "@imskin/skin-gen";
-import { OUTLET_API_KEYS, type Outlet } from "@imskin/contracts";
+import { OUTLETS, OUTLET_API_KEYS, type Outlet } from "@imskin/contracts";
 
 /**
  * REST 出口键从领域契约派生（DOM-001）：传输层保留 camelCase 兼容既有端点，
@@ -35,6 +35,15 @@ export interface GenerateJobInput {
 }
 
 export type JobStatus = "queued" | "processing" | "succeeded" | "failed";
+
+/** JOB-001：分出口导出状态（REST 键名沿用 camelCase 边界约定）。 */
+export interface OutletJobStatus {
+  outletKey: OutletKey;
+  stage: "succeeded" | "failed";
+  byteLength?: number;
+  error?: string;
+  technical?: string;
+}
 
 export interface Job {
   id: string;
@@ -139,6 +148,20 @@ export class AutomationService {
   export(versionId: string): Record<OutletKey, Uint8Array> {
     const set = this.orch.exportSkinSet(versionId);
     return { sogouPc: set.sogouPc, sogouMobile: set.sogouMobile, baiduPc: set.baiduPc, baiduMobile: set.baiduMobile };
+  }
+
+  /**
+   * JOB-001：分出口导出状态（独立隔离）。逐出口构建，一个失败不影响其他；
+   * 真异步 job 队列（stage/progress/TTL）待图像生成接入后展开，当前同步落到终态。
+   */
+  exportOutletStatus(versionId: string): { jobs: OutletJobStatus[] } {
+    const jobs = OUTLETS.map((outlet: Outlet) => {
+      const r = this.orch.exportOutlet(versionId, outlet);
+      return r.ok
+        ? { outletKey: OUTLET_API_KEYS[outlet], stage: "succeeded" as const, byteLength: r.bytes.length }
+        : { outletKey: OUTLET_API_KEYS[outlet], stage: "failed" as const, error: r.diagnostic.userMessage, technical: r.diagnostic.technicalMessage };
+    });
+    return { jobs };
   }
 
   /** 反馈迭代。 */

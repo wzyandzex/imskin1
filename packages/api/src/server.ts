@@ -105,6 +105,12 @@ export function createApiServer(opts: ServerOptions): Server {
         return json(res, 200, { outlets: Object.keys(set) });
       }
 
+      // JOB-001：分出口导出状态（独立隔离，一个失败不影响其他）
+      const outletStatusMatch = path.match(/^\/v1\/versions\/([\w-]+)\/outlet-status$/);
+      if (outletStatusMatch && req.method === "GET") {
+        return json(res, 200, service.exportOutletStatus(outletStatusMatch[1]));
+      }
+
       if (path === "/v1/versions" && req.method === "GET") {
         return json(res, 200, { versions: service.listVersions().map((v) => ({ id: v.id, label: v.label, status: v.status })) });
       }

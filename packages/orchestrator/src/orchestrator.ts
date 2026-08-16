@@ -41,6 +41,7 @@ import { provenance } from "./provenance.ts";
 import { skinToSkinIni, type ToSkinIniOptions } from "./toSkinIni.ts";
 import { skinToBaiduMobile } from "./toBaidu.ts";
 import { skinToBaiduPc } from "./toBaiduPc.ts";
+import type { Outlet } from "@imskin/contracts";
 
 /** 版本 data 里承载的一版设计全量产出。 */
 export interface VersionDesign {
@@ -100,6 +101,23 @@ export interface SogouMobileExportResult {
   /** 打入的素材数量。 */
   imageCount: number;
 }
+
+/** JOB-001：单出口导出结果——成功给字节，失败给结构化 Diagnostic（出口间互不影响）。 */
+export type OutletExportResult =
+  | { ok: true; outlet: Outlet; bytes: Uint8Array; imageCount: number; layoutCount?: number }
+  | {
+      ok: false;
+      outlet: Outlet;
+      diagnostic: {
+        code: string;
+        stage: string;
+        severity: "error";
+        userMessage: string;
+        technicalMessage: string;
+        retryable: boolean;
+        outlets?: Outlet[];
+      };
+    };
 
 function metaOf(skin: SkinManifest): SkinMeta {
   return {
@@ -249,12 +267,13 @@ export class SkinOrchestrator {
   /** A4（搜狗分支）：把某版本的皮肤导出为 .ssf。images 缺省则仅含 skin.ini（真实切图待接入）。 */
   exportSogou(
     versionId: string,
-    opts: { images?: { path: string; data: Uint8Array }[]; ini?: ToSkinIniOptions } = {},
+    opts: { images?: { path: string; data: Uint8Array }[]; ini?: ToSkinIniOptions; skin?: SkinManifest } = {},
   ): ExportResult {
     const design = this.readDesign(versionId);
-    const ini = skinToSkinIni(design.skin, opts.ini);
+    const skin = opts.skin ?? design.skin;
+    const ini = skinToSkinIni(skin, opts.ini);
     const images = opts.images ?? [];
-    const project: SogouSkinProject = { id: design.skin.id, name: design.skin.name, images, ini };
+    const project: SogouSkinProject = { id: skin.id, name: skin.name, images, ini };
     return { bytes: buildSsf(project), iniText: emitSkinIni(ini), imageCount: images.length };
   }
 
@@ -264,10 +283,11 @@ export class SkinOrchestrator {
    */
   exportBaiduMobile(
     versionId: string,
-    opts: { port?: { path: string; content: string }[]; land?: { path: string; content: string }[]; images?: { path: string; data: Uint8Array }[] } = {},
+    opts: { port?: { path: string; content: string }[]; land?: { path: string; content: string }[]; images?: { path: string; data: Uint8Array }[]; skin?: SkinManifest } = {},
   ): BaiduExportResult {
     const design = this.readDesign(versionId);
-    const project = skinToBaiduMobile(design.skin);
+    const skin = opts.skin ?? design.skin;
+    const project = skinToBaiduMobile(skin);
     project.port = opts.port;
     project.land = opts.land;
     project.images = opts.images;
@@ -284,10 +304,11 @@ export class SkinOrchestrator {
    */
   exportBaiduPc(
     versionId: string,
-    opts: { author?: string; images?: { path: string; data: Uint8Array }[] } = {},
+    opts: { author?: string; images?: { path: string; data: Uint8Array }[]; skin?: SkinManifest } = {},
   ): BaiduPcExportResult {
     const design = this.readDesign(versionId);
-    const project = skinToBaiduPc(design.skin, { author: opts.author });
+    const skin = opts.skin ?? design.skin;
+    const project = skinToBaiduPc(skin, { author: opts.author });
     project.images = opts.images;
     return { bytes: buildBps(project), imageCount: opts.images?.length ?? 0 };
   }
@@ -298,13 +319,14 @@ export class SkinOrchestrator {
    */
   exportSogouMobile(
     versionId: string,
-    opts: { layouts?: { path: string; content: unknown }[]; images?: { path: string; data: Uint8Array }[] } = {},
+    opts: { layouts?: { path: string; content: unknown }[]; images?: { path: string; data: Uint8Array }[]; skin?: SkinManifest } = {},
   ): SogouMobileExportResult {
     const design = this.readDesign(versionId);
+    const skin = opts.skin ?? design.skin;
     const project: SogouMobileProject = {
-      id: design.skin.id,
-      name: design.skin.name,
-      theme: { name: design.skin.name, id: design.skin.id },
+      id: skin.id,
+      name: skin.name,
+      theme: { name: skin.name, id: skin.id },
       layouts: opts.layouts as SogouMobileProject["layouts"],
       res: opts.images,
     };
@@ -333,6 +355,54 @@ export class SkinOrchestrator {
     baiduMobileProject.images = images;
     const baiduMobile = buildBds(baiduMobileProject);
     return { sogouPc, sogouMobile, baiduPc, baiduMobile };
+  }
+
+  /**
+   * JOB-001：单出口导出（隔离失败）。任一出口构建失败返回结构化 Diagnostic，
+   * 不影响其他出口；成功返回该出口字节。委托到四个单出口方法（便于测试按出口
+   * 替身/未来按出口注入构建策略）。stage 语义：真异步任务（资产→适配→QA→打包）
+   * 随图像生成接入后展开，当前同步构建直接落到终态。
+   */
+  exportOutlet(
+    versionId: string,
+    outlet: Outlet,
+    opts: { skin?: SkinManifest; images?: { path: string; data: Uint8Array }[] } = {},
+  ): OutletExportResult {
+    const common = { skin: opts.skin, images: opts.images };
+    try {
+      switch (outlet) {
+        case "sogou_pc": {
+          const r = this.exportSogou(versionId, common);
+          return { ok: true, outlet, bytes: r.bytes, imageCount: r.imageCount };
+        }
+        case "sogou_android": {
+          const r = this.exportSogouMobile(versionId, common);
+          return { ok: true, outlet, bytes: r.bytes, imageCount: r.imageCount, layoutCount: r.layoutCount };
+        }
+        case "baidu_pc": {
+          const r = this.exportBaiduPc(versionId, common);
+          return { ok: true, outlet, bytes: r.bytes, imageCount: r.imageCount };
+        }
+        case "baidu_android": {
+          const r = this.exportBaiduMobile(versionId, common);
+          return { ok: true, outlet, bytes: r.bytes, imageCount: r.imageCount, layoutCount: r.layoutCount };
+        }
+      }
+    } catch (e) {
+      return {
+        ok: false,
+        outlet,
+        diagnostic: {
+          code: "OUTLET_BUILD_FAILED",
+          stage: "A4",
+          severity: "error" as const,
+          userMessage: "该出口导出失败，可重试；其他出口不受影响。",
+          technicalMessage: e instanceof Error ? e.message : String(e),
+          retryable: true,
+          outlets: [outlet],
+        },
+      };
+    }
   }
 
   /** A3 图像生成（可选）：由 LLM 图像钩子产键盘背景位图；不可用返回 null（诚实降级，不产假图）。 */

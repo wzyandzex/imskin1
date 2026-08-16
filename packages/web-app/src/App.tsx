@@ -7,8 +7,8 @@
  */
 
 import { useRef, useState } from "react";
-import { SkinOrchestrator } from "@imskin/orchestrator";
-import { outletFromParts } from "@imskin/contracts";
+import { SkinOrchestrator, OUTLETS } from "@imskin/orchestrator";
+import { outletFromParts, type Outlet } from "@imskin/contracts";
 import { ProjectStore, type Project, type ProjectStoreSnapshot } from "@imskin/project-model";
 import {
   EXAMPLE_BRIEFS,
@@ -128,6 +128,14 @@ interface ChatMsg {
   role: "user" | "sys";
   text: string;
 }
+
+/** JOB-001：出口 → 下载文件名尾段（沿用既有命名，兼容既有测试与用户习惯）。 */
+const OUTLET_FILE_STEM: Record<Outlet, string> = {
+  sogou_pc: "sogou-pc.ssf",
+  sogou_android: "sogou-mobile.ssf",
+  baidu_pc: "baidu-pc.bps",
+  baidu_android: "baidu-mobile.bds",
+};
 
 /** 细粒度可点选元素（FR-FEEDBACK-5 增强）：点选哪块就只改哪块。token 命中 applyToSpec 的目标词。 */
 const PICKABLE: Record<string, PickedElement> = {
@@ -614,6 +622,8 @@ export function App() {
 
   // —— UX-003 定稿确认 ——
   const [confirmHint, setConfirmHint] = useState<string | null>(null);
+  /** JOB-001：逐出口导出的失败清单（隔离显示，不阻断其他出口）。 */
+  const [exportErrors, setExportErrors] = useState<{ outlet: Outlet; message: string }[]>([]);
   /** 确认当前版本（唯一进入 confirmed 的入口）；draft（自检未过）给可操作提示。 */
   const confirmCurrent = () => {
     try {
@@ -655,34 +665,35 @@ export function App() {
   // 按当前平台×设备象限导出对应出口（四出口：搜狗PC .ssf / 搜狗Android .ssf / 百度PC .bps / 百度Android .bds）。
   // 真实位图/布局坐标待 A3 图像生成接入；当前产出结构正确、可打包的配置骨架。导出当前预览的深/浅模式（FR-QA-3）。
   // UX-003：仅已确认（confirmed）版本可导出正式包——按钮 disabled 之外的双保险。
+  // JOB-001：单出口隔离导出——失败出口显示诊断，不再牵连整次导出。
   const exportSkin = () => {
     if (!versionConfirmed) return;
-    const base = skin.name || "skin";
-    const set = exportSkinBytes(currentId);
-    if (platform === "sogou") {
-      if (device === "pc") {
-        downloadBytes(set.sogouPc, `${base}-sogou-pc.ssf`);
-      } else {
-        downloadBytes(set.sogouMobile, `${base}-sogou-mobile.ssf`);
-      }
-    } else {
-      if (device === "pc") {
-        downloadBytes(set.baiduPc, `${base}-baidu-pc.bps`);
-      } else {
-        downloadBytes(set.baiduMobile, `${base}-baidu-mobile.bds`);
-      }
+    setExportErrors([]);
+    const target = skinOf(currentId);
+    const o = outletFromParts(platform, device === "pc" ? "pc" : "android") ?? "sogou_pc";
+    const r = orch.exportOutlet(currentId, o, { skin: target });
+    if (!r.ok) {
+      setExportErrors([{ outlet: o, message: r.diagnostic.userMessage }]);
+      return;
     }
+    const base = skin.name || "skin";
+    downloadBytes(r.bytes, `${base}-${OUTLET_FILE_STEM[o]}`);
   };
 
-  // 一键导出全部四个出口（搜狗PC / 搜狗Android / 百度PC / 百度Android）。导出当前预览的深/浅模式（FR-QA-3）。
+  // 一键导出全部四个出口（JOB-001：逐出口隔离——某个出口失败只报该出口错误，其余照常下载）。
+  // 导出当前预览的深/浅模式（FR-QA-3）。
   const exportAll = () => {
     if (!versionConfirmed) return;
+    setExportErrors([]);
+    const target = skinOf(currentId);
     const base = skin.name || "skin";
-    const set = exportSkinBytes(currentId);
-    downloadBytes(set.sogouPc, `${base}-sogou-pc.ssf`);
-    downloadBytes(set.sogouMobile, `${base}-sogou-mobile.ssf`);
-    downloadBytes(set.baiduPc, `${base}-baidu-pc.bps`);
-    downloadBytes(set.baiduMobile, `${base}-baidu-mobile.bds`);
+    const failures: { outlet: Outlet; message: string }[] = [];
+    for (const o of OUTLETS) {
+      const r = orch.exportOutlet(currentId, o, { skin: target });
+      if (r.ok) downloadBytes(r.bytes, `${base}-${OUTLET_FILE_STEM[o]}`);
+      else failures.push({ outlet: o, message: r.diagnostic.userMessage });
+    }
+    setExportErrors(failures);
   };
 
   // —— FR-SHARE 分享与导回 ——
@@ -751,12 +762,6 @@ export function App() {
     const d = orch.readDesign(versionId);
     if (themeMode === "auto" || !d.variant) return d.skin;
     return d.spec.theme === themeMode ? d.skin : d.variant.skin;
-  };
-
-  /** 导出当前预览模式（深/浅）皮肤的四出口包（FR-QA-3：所见即所得，导出即当前预览模式）。 */
-  const exportSkinBytes = (versionId: string) => {
-    const target = skinOf(versionId);
-    return orch.exportSkinSet(versionId, { skin: target });
   };
 
   /** 点选反馈包装：细粒度元素点选（FR-FEEDBACK-5 增强）。
@@ -1041,6 +1046,14 @@ export function App() {
             )}
             {confirmHint && (
               <div className="chat-field-error" role="alert" data-testid="confirm-error">{confirmHint}</div>
+            )}
+            {/* JOB-001：分出口导出失败隔离展示（其余出口照常下载） */}
+            {exportErrors.length > 0 && (
+              <div className="chat-field-error" role="alert" data-testid="export-outlet-errors">
+                {exportErrors.map((e) => (
+                  <div key={e.outlet}>「{e.outlet}」{e.message}</div>
+                ))}
+              </div>
             )}
 
             {/* FR-EXPORT-2：导出前的可读性一键修复（只列 error；修复作为版本节点可回退） */}

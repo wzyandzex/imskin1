@@ -16,6 +16,7 @@ export type {
   BaiduExportResult,
   BaiduPcExportResult,
   SogouMobileExportResult,
+  OutletExportResult,
 } from "./orchestrator.ts";
 export { provenance } from "./provenance.ts";
 export { skinToSkinIni, type ToSkinIniOptions } from "./toSkinIni.ts";

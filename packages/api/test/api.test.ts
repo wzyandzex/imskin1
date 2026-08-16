@@ -144,3 +144,32 @@ test("REST：未配 apiKey → 本地放行（Ollama 模式）", async () => {
     server.close();
   }
 });
+
+test("JOB-001 outlet-status：分出口独立状态，单出口失败不牵连其他", async () => {
+  const svc = new AutomationService();
+  const job = svc.generateSync({ idea: "清冷极简，主色天蓝 #5ab0f0", name: "OS" });
+  const deadline = Date.now() + 5000;
+  while (!["succeeded", "failed"].includes(job.status) && Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, 20));
+  }
+  const versionId = job.result!.versionId;
+
+  // 全部成功的基线
+  const ok = svc.exportOutletStatus(versionId);
+  assert.equal(ok.jobs.length, 4);
+  assert.ok(ok.jobs.every((j) => j.stage === "succeeded"));
+  assert.ok(ok.jobs.every((j) => (j.byteLength ?? 0) > 0));
+
+  // REST 路由
+  const { server, port } = await startApiServer({ service: svc, port: 0 });
+  const base = `http://127.0.0.1:${port}`;
+  try {
+    const res = await fetch(`${base}/v1/versions/${versionId}/outlet-status`);
+    assert.equal(res.status, 200);
+    const body = (await res.json()) as { jobs: Array<{ outletKey: string; stage: string }> };
+    assert.deepEqual(body.jobs.map((j) => j.outletKey).sort(), ["baiduMobile", "baiduPc", "sogouMobile", "sogouPc"]);
+    assert.ok(body.jobs.every((j) => j.stage === "succeeded"));
+  } finally {
+    server.close();
+  }
+});
