@@ -16,9 +16,12 @@ export type {
 
 export {
   ProjectStore,
+  validateProjectStoreSnapshot,
   type CreateProjectOptions,
   type AddVersionOptions,
   type ForkOverrides,
   type ProjectStoreOptions,
   type ProjectStoreSnapshot,
+  type MergeRecord,
 } from "./store.ts";
+export { deepCopy } from "./immutable.ts";

@@ -107,10 +107,13 @@ test("mergeElement：产出新版本、父为 to、记录来源并搬运元素",
   assert.equal(merged.parentId, to.id); // 以 to 为父
   assert.equal(merged.data?.candidateBar, "候选栏B"); // 搬运了 from 的元素
   assert.equal(merged.data?.keyboard, "键盘KB"); // 继承 to 的其它元素
+  // DOM-002：合并溯源升级为 MergeRecord（elementId 兼容保留 + 完整路径 + 变更清单）
   assert.deepEqual(merged.data?.mergedFrom, {
     elementId: "candidateBar",
+    elementPath: "candidateBar",
     fromVersionId: from.id,
-  }); // 记录合并来源
+    changedPaths: ["candidateBar"],
+  });
 
   // merge 不改动原 to / from 版本
   assert.equal(store.getVersion(to.id)?.data?.candidateBar, "候选栏A");
@@ -249,4 +252,101 @@ test("确认后反馈 fork：新版本不继承 confirmed（导出门禁自动�
   assert.equal(child.status, "ready");
   assert.notEqual(child.status, "confirmed");
   assert.equal(store.getVersion("v1")?.status, "confirmed"); // 父版本确认不受影响
+});
+
+// —— DOM-002：嵌套路径合并 / 无差异拒绝 / 深层不可变 / 坏快照拒绝 ——
+test("mergeElement 嵌套路径：只搬运指定字段，其余嵌套内容保留", () => {
+  const store = new ProjectStore();
+  const p = store.createProject("P");
+  const to = store.addVersion(p.id, {
+    data: { spec: { candidateBar: { fontSize: 14, color: "#111" }, keyboard: { radius: 8 } } },
+  });
+  const from = store.addVersion(p.id, {
+    data: { spec: { candidateBar: { fontSize: 20, color: "#222" } } },
+  });
+
+  const merged = store.mergeElement(from.id, to.id, "spec.candidateBar.fontSize");
+  const spec = merged.data?.spec as Record<string, Record<string, unknown>>;
+  assert.equal(spec.candidateBar.fontSize, 20); // 搬运了目标字段
+  assert.equal(spec.candidateBar.color, "#111"); // 同对象其它字段保留 to 的
+  assert.equal(spec.keyboard.radius, 8); // 兄弟子树不受影响
+  assert.deepEqual((merged.data?.mergedFrom as Record<string, unknown>).changedPaths, ["spec.candidateBar.fontSize"]);
+
+  // 源/目标版本不被改动（深拷贝搬运）
+  const fromSpec = (store.getVersion(from.id)?.data?.spec as Record<string, Record<string, unknown>>);
+  assert.equal(fromSpec.candidateBar.color, "#222");
+  const toSpec = (store.getVersion(to.id)?.data?.spec as Record<string, Record<string, unknown>>);
+  assert.equal(toSpec.candidateBar.fontSize, 14);
+});
+
+test("mergeElement：路径不存在 / 值无差异 → 抛错且不产生版本", () => {
+  const store = new ProjectStore();
+  const p = store.createProject("P");
+  const v1 = store.addVersion(p.id, { data: { a: { b: 1 } } });
+  const v2 = store.addVersion(p.id, { data: { a: { b: 1 } } });
+  const v3 = store.addVersion(p.id, { data: { a: { b: 2 } } });
+
+  assert.throws(() => store.mergeElement(v1.id, v2.id, "a.c"), /不存在元素路径/);
+  assert.throws(() => store.mergeElement(v1.id, v2.id, "a.b"), /无差异/); // 两版同为 1
+  assert.equal(store.listVersions(p.id).length, 3); // 没有空版本节点产生
+  assert.doesNotThrow(() => store.mergeElement(v3.id, v2.id, "a.b")); // 有差异正常合并
+});
+
+test("DOM-002 深层不可变：快照与 fork 切断嵌套引用共享", () => {
+  const store = new ProjectStore();
+  const p = store.createProject("P");
+  const parent = store.addVersion(p.id, {
+    data: { spec: { nested: { value: 1 } } },
+  });
+
+  // 读取快照改嵌套字段 → store 内部不受影响
+  const snap = store.getVersion(parent.id)!;
+  (snap.data!.spec as Record<string, unknown>).nested = { value: 999 };
+  const again = store.getVersion(parent.id)!;
+  assert.deepEqual((again.data!.spec as Record<string, { value: number }>).nested, { value: 1 });
+
+  // fork 子版本：改子版 data 嵌套字段 → 父版本不受影响
+  const child = store.fork(parent.id, { data: { spec: { nested: { value: 1 } } } });
+  ((store.getVersion(child.id)!.data!.spec as Record<string, unknown>));
+  const childSnap = store.getVersion(child.id)!;
+  const childSpec = childSnap.data!.spec as Record<string, { value: number }>;
+  childSpec.nested.value = 42; // 改的是深拷贝快照
+  const parentAfter = store.getVersion(parent.id)!;
+  assert.deepEqual((parentAfter.data!.spec as Record<string, { value: number }>).nested, { value: 1 });
+  assert.deepEqual((store.getVersion(child.id)!.data!.spec as Record<string, { value: number }>).nested, { value: 1 });
+});
+
+test("DOM-002 快照深拷贝：snapshot() 的嵌套改动不污染 store（升级既有浅拷贝用例）", () => {
+  const store = new ProjectStore();
+  const p = store.createProject("X");
+  store.addVersion(p.id, { data: { n: { deep: 1 } } });
+  const snap = store.snapshot();
+  (snap.versions[0].data as Record<string, { deep: number }>).n.deep = 999;
+  const v = store.getVersion("v1")!.data as Record<string, { deep: number }>;
+  assert.equal(v.n.deep, 1); // 嵌套字段也被隔离（旧实现只隔离顶层）
+});
+
+test("DOM-002 坏快照拒绝：结构/枚举/引用非法 → fromSnapshot 抛错", () => {
+  const good = new ProjectStore();
+  const p = good.createProject("P");
+  good.addVersion(p.id, { status: "ready", data: { x: 1 } });
+  const base = good.snapshot();
+  assert.doesNotThrow(() => ProjectStore.fromSnapshot(base)); // 合法基线
+
+  const clone = (o: unknown) => JSON.parse(JSON.stringify(o));
+  assert.throws(() => ProjectStore.fromSnapshot(null), /不是对象/);
+  assert.throws(() => ProjectStore.fromSnapshot({ ...clone(base), versions: "nope" }), /versions 必须是数组/);
+  assert.throws(() => ProjectStore.fromSnapshot({ ...clone(base), projectSeq: -1 }), /projectSeq/);
+  const badStatus = clone(base);
+  badStatus.versions[0].status = "shipped";
+  assert.throws(() => ProjectStore.fromSnapshot(badStatus), /状态非法/);
+  const orphan = clone(base);
+  orphan.versions[0].projectId = "p404";
+  assert.throws(() => ProjectStore.fromSnapshot(orphan), /不在项目中/);
+  const badParent = clone(base);
+  badParent.versions[0].parentId = "v404";
+  assert.throws(() => ProjectStore.fromSnapshot(badParent), /父版本不存在/);
+  const badMark = clone(base);
+  badMark.marks.push({ versionId: "v1", elementId: "x", source: "maybe" as never });
+  assert.throws(() => ProjectStore.fromSnapshot(badMark), /来源非法/);
 });

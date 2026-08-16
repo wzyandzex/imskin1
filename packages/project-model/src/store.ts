@@ -19,6 +19,7 @@ import type {
   VersionStatus,
   SatisfactionMark,
 } from "./types.ts";
+import { deepCopy } from "./immutable.ts";
 
 /** 建项目的可选参数。 */
 export interface CreateProjectOptions {
@@ -59,6 +60,65 @@ export interface ProjectStoreSnapshot {
   marks: SatisfactionMark[];
   projectSeq: number;
   versionSeq: number;
+}
+
+/** 元素级合并溯源（DOM-002）：记录搬运路径与差异，供版本树 UI 与漂移检测消费。 */
+export interface MergeRecord {
+  /** 兼容字段：路径首段（旧行为的顶层 key）。 */
+  elementId: string;
+  /** 完整元素路径（点分，如 "spec.candidateBar.fontSize"；顶层元素即单段）。 */
+  elementPath: string;
+  fromVersionId: string;
+  changedPaths: string[];
+}
+
+const VERSION_STATUSES: readonly string[] = [
+  "draft",
+  "generating",
+  "ready",
+  "confirmed",
+  "exported",
+];
+
+/**
+ * 快照运行时校验（DOM-002 坏文件拒绝）：导入/恢复前先验结构，非法抛带 issues 的 Error。
+ * 校验范围：容器类型、必填字段、枚举值、版本→项目引用。不做业务级深校验（那是
+ * DesignSnapshotV1 parser 的职责，DOM 后续切片）。
+ */
+export function validateProjectStoreSnapshot(x: unknown): asserts x is ProjectStoreSnapshot {
+  const issues: string[] = [];
+  const bad = (m: string) => issues.push(m);
+  if (typeof x !== "object" || x === null) throw new Error("快照不是对象");
+  const s = x as Record<string, unknown>;
+  if (!Array.isArray(s.projects)) bad("projects 必须是数组");
+  if (!Array.isArray(s.versions)) bad("versions 必须是数组");
+  if (!Array.isArray(s.marks)) bad("marks 必须是数组");
+  if (!Number.isInteger(s.projectSeq) || (s.projectSeq as number) < 0) bad("projectSeq 必须是非负整数");
+  if (!Number.isInteger(s.versionSeq) || (s.versionSeq as number) < 0) bad("versionSeq 必须是非负整数");
+  if (issues.length > 0) throw new Error(`快照结构非法：${issues.join("；")}`);
+
+  const projectIds = new Set<string>();
+  for (const p of s.projects as Project[]) {
+    if (typeof p?.id !== "string" || typeof p?.name !== "string") bad(`项目缺 id/name：${JSON.stringify(p).slice(0, 60)}`);
+    else projectIds.add(p.id);
+  }
+  const versionIds = new Set<string>();
+  for (const v of s.versions as Version[]) {
+    if (typeof v?.id !== "string") { bad("版本缺 id"); continue; }
+    versionIds.add(v.id);
+    if (typeof v.projectId !== "string" || !projectIds.has(v.projectId)) bad(`版本 ${v.id} 的 projectId 缺失或不在项目中`);
+    if (!(v.parentId === null || typeof v.parentId === "string")) bad(`版本 ${v.id} 的 parentId 非法`);
+    if (!VERSION_STATUSES.includes(v.status as string)) bad(`版本 ${v.id} 状态非法：${String(v.status)}`);
+    if (v.data !== undefined && (typeof v.data !== "object" || v.data === null)) bad(`版本 ${v.id} 的 data 非法`);
+  }
+  for (const v of s.versions as Version[]) {
+    if (typeof v?.parentId === "string" && !versionIds.has(v.parentId)) bad(`版本 ${v.id} 的父版本不存在：${v.parentId}`);
+  }
+  for (const m of s.marks as SatisfactionMark[]) {
+    if (typeof m?.versionId !== "string" || typeof m?.elementId !== "string") bad("满意标记缺 versionId/elementId");
+    else if (m.source !== "explicit" && m.source !== "inferred") bad(`满意标记 ${m.versionId}/${m.elementId} 来源非法`);
+  }
+  if (issues.length > 0) throw new Error(`快照内容非法：${issues.slice(0, 5).join("；")}${issues.length > 5 ? " 等" : ""}`);
 }
 
 export class ProjectStore {
@@ -142,7 +202,7 @@ export class ProjectStore {
       parentId: parent.id,
       status: overrides.status ?? "draft",
       label: overrides.label,
-      data: { ...(parent.data ?? {}), ...(overrides.data ?? {}) },
+      data: deepCopy({ ...(parent.data ?? {}), ...(overrides.data ?? {}) }),
     });
   }
 
@@ -181,8 +241,10 @@ export class ProjectStore {
 
   /**
    * 把 from 版本的某元素合并进 to 版本，**产出以 to 为父的新版本**（§5.5 元素级合并）。
-   * 新版本继承 to 的 data，写入合并溯源 mergedFrom，并搬运被合并元素。
-   * from/to 未知或跨项目则抛错。
+   * DOM-002：elementId 升级为**点分元素路径**（"candidateBar" 顶层兼容；嵌套如
+   * "spec.candidateBar.fontSize" 沿路径取值/写入，中间层缺失则创建）；值经深拷贝搬运，
+   * 输出 MergeRecord（changedPaths）供 UI 与漂移检测消费。
+   * 抛错（均不产生空版本节点）：from/to 未知、跨项目、from 中路径不存在、两版值无差异。
    */
   mergeElement(
     fromVersionId: string,
@@ -196,15 +258,44 @@ export class ProjectStore {
         `跨项目合并不被支持: ${fromVersionId} → ${toVersionId}`,
       );
     }
-    const data: Record<string, unknown> = { ...(to.data ?? {}) };
-    // 元素级搬运：当元素以顶层 key 寻址时，把 from 的该元素值拷入结果。
-    // PROVISIONAL(待核实)：AssetBundle 的 element_id 寻址方案（架构 §7.1）尚未定稿——
-    // 这里仅处理"data 顶层 key === elementId"的直接情形；嵌套/命名空间寻址待格式审计后补齐。
-    if (Object.prototype.hasOwnProperty.call(from.data ?? {}, elementId)) {
-      data[elementId] = (from.data as Record<string, unknown>)[elementId];
+    const segments = elementId.split(".").filter(Boolean);
+    if (segments.length === 0) throw new Error("元素路径为空");
+
+    // 从 from 沿路径取值（深拷贝，切断与源版本嵌套引用共享）。
+    let src: unknown = from.data ?? {};
+    for (const seg of segments) {
+      if (typeof src !== "object" || src === null || !Object.prototype.hasOwnProperty.call(src, seg)) {
+        throw new Error(`版本 ${fromVersionId} 中不存在元素路径: ${elementId}`);
+      }
+      src = (src as Record<string, unknown>)[seg];
     }
+    const value = deepCopy(src);
+
+    // 在 to 的深拷贝上沿路径写入（中间层缺失则创建为空对象）。
+    const data: Record<string, unknown> = deepCopy(to.data ?? {});
+    let dst: Record<string, unknown> = data;
+    for (let i = 0; i < segments.length - 1; i++) {
+      const seg = segments[i];
+      const next = dst[seg];
+      if (typeof next !== "object" || next === null) dst[seg] = {};
+      dst = dst[seg] as Record<string, unknown>;
+    }
+    const last = segments[segments.length - 1];
+
+    // 无差异不创建节点（docs/01 §16：合并输出必须可证有变化）。
+    if (JSON.stringify(dst[last]) === JSON.stringify(value)) {
+      throw new Error(`元素 ${elementId} 在两个版本中无差异，未产生合并版本`);
+    }
+    dst[last] = value;
+
     // 记录合并来源（每个合并结果版本恰由一次合并产生，故为单条溯源；历史经父链回溯）。
-    data.mergedFrom = { elementId, fromVersionId };
+    const record: MergeRecord = {
+      elementId: segments[0],
+      elementPath: elementId,
+      fromVersionId,
+      changedPaths: [elementId],
+    };
+    data.mergedFrom = record;
     return this.insertVersion({
       projectId: to.projectId,
       parentId: to.id,
@@ -255,8 +346,11 @@ export class ProjectStore {
     };
   }
 
-  /** 从快照重建 store（含自增计数，保证后续新增 id 不与历史冲突）。 */
+  /** 从快照重建 store（含自增计数，保证后续新增 id 不与历史冲突）。
+   *  DOM-002：先经 validateProjectStoreSnapshot 结构校验（坏文件拒绝）；
+   *  各版本 data 深拷贝入 store，切断与调用方对象的嵌套共享。 */
   static fromSnapshot(snap: ProjectStoreSnapshot, opts: ProjectStoreOptions = {}): ProjectStore {
+    validateProjectStoreSnapshot(snap);
     const store = new ProjectStore(opts);
     for (const p of snap.projects) {
       store.projects.set(p.id, {
@@ -272,7 +366,7 @@ export class ProjectStore {
         projectId: v.projectId,
         parentId: v.parentId,
         status: v.status,
-        data: { ...(v.data ?? {}) },
+        data: deepCopy(v.data ?? {}),
         ...(v.label !== undefined ? { label: v.label } : {}),
       });
     }
@@ -319,14 +413,15 @@ export class ProjectStore {
     return v;
   }
 
-  /** 版本快照：隔离内部状态。data 浅拷贝（顶层容器隔离，嵌套引用共享）。 */
+  /** 版本快照：隔离内部状态。DOM-002：data 深拷贝——外部改动（含嵌套字段）
+   *  不会污染 store 内部状态与历史版本。 */
   private snapshotVersion(v: Version): Version {
     const out: Version = {
       id: v.id,
       projectId: v.projectId,
       parentId: v.parentId,
       status: v.status,
-      data: { ...(v.data ?? {}) },
+      data: deepCopy(v.data ?? {}),
     };
     if (v.label !== undefined) out.label = v.label;
     return out;
