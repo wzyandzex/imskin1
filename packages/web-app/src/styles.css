@@ -894,6 +894,11 @@ body {
   opacity: 0.5;
   cursor: not-allowed;
 }
+.platform-chrome .pc-haptics {
+  color: #8a6d1a;
+  white-space: nowrap;
+  cursor: help;
+}
 /* MOB-001：候选词手势（滑动翻页 + 抬起选词）需要横向指针流，禁浏览器默认横向平移 */
 .candidate {
   touch-action: pan-y;

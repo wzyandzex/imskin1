@@ -271,6 +271,40 @@ describe("PreviewRuntime 真实交互", () => {
     expect(committed()).toBe("时间");
   });
 
+  test("触感状态与安全降级（MOB-002）：无 vibrate 环境显示不支持，按键 no-op 不炸", async () => {
+    const user = userEvent.setup();
+    render(<PreviewRuntime skin={coolMinimal} device="mobile" initialMode="t9" />);
+    expect(screen.getByTestId("haptics-status").textContent).toContain("浏览器不支持");
+    // 按键路径在无振动能力下照常工作（安全 no-op）
+    const kb = screen.getByTestId("vkeyboard");
+    await user.click(within(kb).getByRole("button", { name: /^9 wxyz$/ }));
+    expect(screen.getByTestId("composing").textContent).toBeTruthy();
+  });
+
+  test("触感触发（MOB-002）：stub navigator.vibrate → 状态切换且按键触发轻震", async () => {
+    const calls: number[] = [];
+    Object.defineProperty(navigator, "vibrate", {
+      value: (p?: number | number[]) => {
+        calls.push(Array.isArray(p) ? p[0] : (p ?? 0));
+        return true;
+      },
+      configurable: true,
+    });
+    try {
+      const user = userEvent.setup();
+      render(<PreviewRuntime skin={coolMinimal} device="mobile" initialMode="t9" />);
+      expect(screen.getByTestId("haptics-status").textContent).toContain("浏览器模拟");
+      expect(screen.getByTestId("haptics-status").textContent).toContain("真机更强");
+      const kb = screen.getByTestId("vkeyboard");
+      await user.click(within(kb).getByRole("button", { name: /^9 wxyz$/ }));
+      expect(calls.length).toBeGreaterThan(0); // 按键触发了振动
+      expect(screen.getByTestId("composing").textContent).toBeTruthy(); // 输入不受影响
+    } finally {
+      // @ts-expect-error 测试注入的属性，清理还原
+      delete navigator.vibrate;
+    }
+  });
+
   test("位图皮肤：键盘与候选栏 image 背景各渲染九宫格 Canvas 层，且不影响输入（§4.7）", async () => {
     const user = userEvent.setup();
     const imgFill = { type: "image" as const, src: "data:image/png;base64,iVBORw0KGgo=", slice: { top: 8, right: 8, bottom: 8, left: 8 } };

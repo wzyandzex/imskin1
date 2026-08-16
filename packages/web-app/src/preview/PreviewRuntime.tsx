@@ -15,6 +15,7 @@ import { VirtualKeyboard } from "./VirtualKeyboard.tsx";
 import { layoutFor } from "./layouts.ts";
 import { dispatch, type KeyAction, type PanelKind } from "./actions.ts";
 import { KeySound } from "./sound.ts";
+import { vibrateKeytap, vibrateSupported } from "./haptics.ts";
 import { profileFor } from "./profiles.ts";
 
 interface Props {
@@ -55,6 +56,8 @@ export function PreviewRuntime({ skin, device = "pc", outlet = "sogou_pc", sound
   const run = useCallback(
     (action: KeyAction) => {
       soundRef.current?.playClick(action.type === "input" || action.type === "select" ? "normal" : "special");
+      // MOB-002：移动形态按键触感（navigator.vibrate 尽力还原；不支持环境安全 no-op）
+      if (device === "mobile") vibrateKeytap();
       if (action.type === "panel") {
         setPanel(action.value);
         rerender();
@@ -63,7 +66,7 @@ export function PreviewRuntime({ skin, device = "pc", outlet = "sogou_pc", sound
       dispatch(session, action);
       rerender();
     },
-    [session, rerender],
+    [session, rerender, device],
   );
 
   const stageRef = useRef<HTMLDivElement | null>(null);
@@ -149,6 +152,11 @@ export function PreviewRuntime({ skin, device = "pc", outlet = "sogou_pc", sound
             title={profile.simulated.join("；")}
           >
             模拟项 {profile.simulated.length}
+          </span>
+        )}
+        {device === "mobile" && (
+          <span className="pc-haptics" data-testid="haptics-status" title="浏览器振动远弱于真机（iOS Safari 不支持）；不支持时自动关闭，不假装等价">
+            触感：{vibrateSupported() ? "浏览器模拟（真机更强）" : "浏览器不支持"}
           </span>
         )}
       </div>

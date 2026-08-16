@@ -35,7 +35,7 @@ export const PREVIEW_PROFILES: Record<Outlet, PreviewProfile> = {
     label: "搜狗 Android",
     statusItems: ["中", "符", "九/26", "语音"],
     candidateNote: "候选横排滑动翻页",
-    simulated: ["功能栏顺序未经真机审计（R-16）", "按键音为合成音，非皮肤自带资源"],
+    simulated: ["功能栏顺序未经真机审计（R-16）", "按键音为合成音，非皮肤自带资源", "振动为浏览器模拟，真机更强"],
   },
   baidu_pc: {
     outlet: "baidu_pc",
