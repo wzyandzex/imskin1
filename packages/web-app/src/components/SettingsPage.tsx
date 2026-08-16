@@ -222,6 +222,10 @@ function ModelsPanel({
         <h2>接入模型</h2>
         <button type="button" className="gen-btn small" onClick={addConfig} data-testid="model-add">+ 添加配置</button>
       </div>
+      {/* SEC-003：密钥存储边界如实告知（ADR-005 短期项） */}
+      <div className="key-storage-notice" data-testid="key-storage-notice">
+        🔐 安全提示：API Key 仅保存在<strong>本机浏览器 localStorage</strong>，由浏览器直连你配置的服务（不经过任何中间服务器）。共享电脑请注意风险；<strong>项目文件导出/导入不包含任何模型配置与 Key</strong>。
+      </div>
       <p className="settings-hint">
         管理你的 LLM 接入。每套配置是一个 OpenAI 兼容的 <code>base_url + api_key + model</code> 三元组。
         可配多套并在输入区切换器里选用。启用开关控制是否生效；禁用的配置保留但不进注册表。

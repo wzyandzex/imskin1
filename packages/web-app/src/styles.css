@@ -899,6 +899,17 @@ body {
   white-space: nowrap;
   cursor: help;
 }
+/* SEC-003：密钥存储提示 */
+.key-storage-notice {
+  font-size: 12px;
+  color: #8a6d1a;
+  background: rgba(184, 134, 11, 0.06);
+  border: 1px solid rgba(184, 134, 11, 0.35);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin: 8px 0;
+  line-height: 1.6;
+}
 /* QA-001：四出口交付状态卡 */
 .outlet-status {
   font-size: 12px;
