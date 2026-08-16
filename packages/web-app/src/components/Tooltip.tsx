@@ -8,7 +8,7 @@
  * 静止约 280ms 后淡入，替代原生 title。
  */
 
-import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 interface Props {
@@ -47,6 +47,14 @@ export function Tooltip({ label, combo, side = "bottom", className, children }: 
     timer.current = null;
     setShow(false);
   };
+  // 卸载清掉未触发的悬停定时器：jsdom 测试环境卸载后 window 会被销毁，
+  // 迟到的 setShow 会成为未捕获异常（曾在全量套件中以 Uncaught ReferenceError 出现）。
+  useEffect(() => {
+    return () => {
+      if (timer.current) window.clearTimeout(timer.current);
+      timer.current = null;
+    };
+  }, []);
 
   // 显示后测量气泡尺寸，按触发物坐标 + 视口边缘钳制计算最终位置
   useLayoutEffect(() => {
