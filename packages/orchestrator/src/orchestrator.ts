@@ -33,7 +33,7 @@ import {
 } from "@imskin/feedback-core";
 import { checkSkin, checkAssetBundle, type QAReport, type AssetCheckResult } from "@imskin/qa-core";
 import { ProjectStore, type Project, type Version } from "@imskin/project-model";
-import { buildSsf, emitSkinIni, type SogouSkinProject } from "@imskin/sogou-adapter";
+import { buildSsf, emitSkinIni, validateSsf, type SogouSkinProject } from "@imskin/sogou-adapter";
 import { buildBds } from "@imskin/baidu-mobile-adapter";
 import { buildBps } from "@imskin/baidu-pc-adapter";
 import { buildSsf as buildSogouMobileSsf, type SogouMobileProject } from "@imskin/sogou-mobile-adapter";
@@ -118,7 +118,16 @@ export interface SogouMobileExportResult {
 
 /** JOB-001：单出口导出结果——成功给字节，失败给结构化 Diagnostic（出口间互不影响）。 */
 export type OutletExportResult =
-  | { ok: true; outlet: Outlet; bytes: Uint8Array; imageCount: number; layoutCount?: number }
+  | {
+      ok: true;
+      outlet: Outlet;
+      bytes: Uint8Array;
+      imageCount: number;
+      layoutCount?: number;
+      /** OUT-SGPC-001：包结构报告（G4 结构子集）。sogou_pc 已接校验器；其余出口随各自
+       *  字段收口接入——undefined 在交付闸门中按 not_run 处理（等同 failed，docs/03 §4）。 */
+      structuralReport?: { ok: boolean; issues: string[]; entries: string[] };
+    }
   | {
       ok: false;
       outlet: Outlet;
@@ -428,7 +437,8 @@ export class SkinOrchestrator {
       switch (outlet) {
         case "sogou_pc": {
           const r = this.exportSogou(versionId, common);
-          return { ok: true, outlet, bytes: r.bytes, imageCount: r.imageCount };
+          // OUT-SGPC-001：黄金出口附 G4 结构报告（zip/CRC/入口/编码/关键节/路径安全）
+          return { ok: true, outlet, bytes: r.bytes, imageCount: r.imageCount, structuralReport: validateSsf(r.bytes) };
         }
         case "sogou_android": {
           const r = this.exportSogouMobile(versionId, common);

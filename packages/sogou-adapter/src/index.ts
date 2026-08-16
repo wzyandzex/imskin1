@@ -23,3 +23,4 @@ export {
 } from "./skin-ini.ts";
 
 export { buildSsf, type SogouSkinProject } from "./ssf.ts";
+export { validateSsf, type StructuralReport } from "./validate.ts";
