@@ -334,7 +334,7 @@ test("DOM-002 坏快照拒绝：结构/枚举/引用非法 → fromSnapshot 抛�
   assert.doesNotThrow(() => ProjectStore.fromSnapshot(base)); // 合法基线
 
   const clone = (o: unknown) => JSON.parse(JSON.stringify(o));
-  assert.throws(() => ProjectStore.fromSnapshot(null), /不是对象/);
+  assert.throws(() => ProjectStore.fromSnapshot(null as unknown as Parameters<typeof ProjectStore.fromSnapshot>[0]), /不是对象/);
   assert.throws(() => ProjectStore.fromSnapshot({ ...clone(base), versions: "nope" }), /versions 必须是数组/);
   assert.throws(() => ProjectStore.fromSnapshot({ ...clone(base), projectSeq: -1 }), /projectSeq/);
   const badStatus = clone(base);

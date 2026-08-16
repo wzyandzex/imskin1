@@ -34,7 +34,7 @@ test("JOB-001 exportOutlet：四出口各自成功返回字节与出口标识", 
 test("JOB-001 失败隔离：单出口构建抛错 → 仅该出口 failed 带 Diagnostic，其余不受影响", () => {
   const { orch, versionId } = boot();
   // 仅让搜狗 Android 分支抛错（exportOutlet 委托单出口方法，可按出口替身）
-  const spy = mock.method(SkinOrchestrator.prototype as never as Record<string, unknown>, "exportSogouMobile", function (this: SkinOrchestrator) {
+  const spy = mock.method(SkinOrchestrator.prototype, "exportSogouMobile", function (this: SkinOrchestrator) {
     throw new Error("layout ini build crashed");
   });
   try {

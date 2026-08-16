@@ -36,7 +36,7 @@ test("REST：health / generate(wait) / get job / versions / export", async () =>
   const base = `http://127.0.0.1:${port}`;
   try {
     // health
-    const h = await (await fetch(`${base}/v1/health`)).json();
+    const h = (await (await fetch(`${base}/v1/health`)).json()) as { ok?: boolean };
     assert.equal(h.ok, true);
 
     // 同步生成
@@ -51,7 +51,7 @@ test("REST：health / generate(wait) / get job / versions / export", async () =>
     const versionId = job.result!.versionId;
 
     // get job
-    const got = await (await fetch(`${base}/v1/generations/${job.id}`)).json();
+    const got = (await (await fetch(`${base}/v1/generations/${job.id}`)).json()) as { status?: string };
     assert.equal(got.status, "succeeded");
 
     // versions

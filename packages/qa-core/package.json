@@ -11,7 +11,8 @@
     "@imskin/contracts": "*"
   },
   "scripts": {
-    "test": "node --test test/*.test.ts"
+    "test": "node --test test/*.test.ts",
+    "typecheck": "tsc --noEmit -p ."
   },
   "license": "UNLICENSED"
 }

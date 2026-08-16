@@ -27,6 +27,7 @@ import {
   parseDeliveryLevel,
   parseOutlet,
 } from "../src/index.ts";
+import type { ChangeInstructionV1, PackageArtifactV1 } from "../src/index.ts";
 
 test("OUTLETS 恰为四出口，vendor/device 拆分正确", () => {
   assert.deepEqual([...OUTLETS], ["sogou_pc", "sogou_android", "baidu_pc", "baidu_android"]);
@@ -117,7 +118,7 @@ test("OUTLET_EXTENSIONS：四出口扩展名唯一权威映射", () => {
 });
 
 test("isPackageArtifact：必填字段/SHA-256 形态校验 + 扩展名一致性", () => {
-  const a = {
+  const a: PackageArtifactV1 = {
     schemaVersion: 1,
     id: "art_1",
     projectId: "prj_1",
@@ -145,7 +146,7 @@ test("isPackageArtifact：必填字段/SHA-256 形态校验 + 扩展名一致性
 });
 
 test("isChangeInstruction：枚举/数组/置信度校验", () => {
-  const c = {
+  const c: ChangeInstructionV1 = {
     schemaVersion: 1,
     category: "asset_param",
     targetElementIds: ["candidateBar.candidateText"],
@@ -166,7 +167,7 @@ test("isChangeInstruction：枚举/数组/置信度校验", () => {
 });
 
 test("平台类指令必须带目标出口（不变量）", () => {
-  const base = {
+  const base: ChangeInstructionV1 = {
     schemaVersion: 1,
     category: "platform",
     targetElementIds: ["candidateBar.background"],
@@ -176,10 +177,10 @@ test("平台类指令必须带目标出口（不变量）", () => {
     preserveElementIds: [],
     confidence: 0.9,
     reason: "百度这边对不齐",
-  } as const;
+  };
   assert.equal(isChangeInstruction(base), true);
   assert.equal(instructionOutletsValid(base), false); // platform 无出口 → 违反不变量
-  const withOutlet = { ...base, targetOutlets: ["baidu_pc", "baidu_android"] };
+  const withOutlet: ChangeInstructionV1 = { ...base, targetOutlets: ["baidu_pc", "baidu_android"] };
   assert.equal(instructionOutletsValid(withOutlet), true);
   // style 类允许空出口（作用于全部）
   assert.equal(instructionOutletsValid({ ...base, category: "style" }), true);

@@ -9,7 +9,8 @@
   },
   "scripts": {
     "test": "node --test test/*.test.ts",
-    "test:watch": "node --test --watch test/*.test.ts"
+    "test:watch": "node --test --watch test/*.test.ts",
+    "typecheck": "tsc --noEmit -p ."
   },
   "license": "UNLICENSED"
 }
