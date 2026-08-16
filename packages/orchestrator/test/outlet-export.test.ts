@@ -74,3 +74,17 @@ test("JOB-001 skin 覆盖：exportOutlet 接受深浅变体皮肤（FR-QA-3 所�
     assert.notEqual(Buffer.from(rA.bytes).toString("hex"), Buffer.from(rB.bytes).toString("hex"));
   }
 });
+
+test("ASSET-001 assetStatus：config 角色由 spec 满足，必需位图如实列缺（install_candidate 闸门）", () => {
+  const { orch, versionId } = boot();
+  const r = orch.assetStatus(versionId, "sogou_pc");
+  assert.deepEqual(r.missingRequired, ["statusBar.icons"]); // 当前唯一必需位图缺口
+  assert.ok(r.satisfiedRequired.includes("candidateBar.background"));
+  assert.ok(r.satisfiedRequired.includes("composing.text"));
+  const err = r.issues.find((i) => i.code === "ASSET_MISSING");
+  assert.ok(err && err.severity === "error");
+  // 四出口都可查询（过渡画像）
+  for (const o of ["sogou_android", "baidu_pc", "baidu_android"] as const) {
+    assert.deepEqual(orch.assetStatus(versionId, o).missingRequired, ["statusBar.icons"]);
+  }
+});

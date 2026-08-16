@@ -40,6 +40,22 @@ export { OUTLET_EXTENSIONS, isPackageArtifact, artifactExtensionMatches } from "
 export type { PackageArtifactV1 } from "./artifact.ts";
 
 export {
+  ASSET_ROLES,
+  SOGOU_PC_ASSET_PROFILE,
+  GENERIC_ASSET_PROFILE,
+  profileForOutlet,
+  isAssetDescriptor,
+  isAssetProfile,
+} from "./assets.ts";
+export type {
+  AssetRole,
+  AssetCarrier,
+  AssetProfileEntry,
+  AssetProfileV1,
+  AssetDescriptorV1,
+} from "./assets.ts";
+
+export {
   FEEDBACK_CATEGORIES,
   CHANGE_OPERATIONS,
   LOW_CONFIDENCE_THRESHOLD,

@@ -31,7 +31,7 @@ import {
   type Classification,
   type RouteResult,
 } from "@imskin/feedback-core";
-import { checkSkin, type QAReport } from "@imskin/qa-core";
+import { checkSkin, checkAssetBundle, type QAReport, type AssetCheckResult } from "@imskin/qa-core";
 import { ProjectStore, type Project, type Version } from "@imskin/project-model";
 import { buildSsf, emitSkinIni, type SogouSkinProject } from "@imskin/sogou-adapter";
 import { buildBds } from "@imskin/baidu-mobile-adapter";
@@ -41,7 +41,7 @@ import { provenance } from "./provenance.ts";
 import { skinToSkinIni, type ToSkinIniOptions } from "./toSkinIni.ts";
 import { skinToBaiduMobile } from "./toBaidu.ts";
 import { skinToBaiduPc } from "./toBaiduPc.ts";
-import { outletDeviceClass, outletVendor, type Outlet } from "@imskin/contracts";
+import { outletDeviceClass, outletVendor, profileForOutlet, type Outlet } from "@imskin/contracts";
 
 /** 版本 data 里承载的一版设计全量产出。 */
 export interface VersionDesign {
@@ -474,6 +474,28 @@ export class SkinOrchestrator {
   /** 版本血缘（根→该版本）。 */
   lineage(versionId: string): Version[] {
     return this.store.lineage(versionId);
+  }
+
+  /**
+   * ASSET-001：某版本在某出口的资产完整性（G2 检查）。即时派生、不进快照。
+   * 诚实边界：位图资产管道（A3→AssetDescriptor 注册）未接入，assets 恒为空——
+   * 必需位图角色（如状态栏图标）如实落在 missingRequired，作为 install_candidate
+   * 闸门的缺口依据（docs/03 §3），不伪造闭合。
+   */
+  assetStatus(versionId: string, outlet: Outlet): AssetCheckResult {
+    const design = this.readDesign(versionId);
+    return checkAssetBundle({
+      profile: profileForOutlet(outlet),
+      hasToken: (path) => {
+        let cur: unknown = design.spec;
+        for (const seg of path.split(".")) {
+          if (typeof cur !== "object" || cur === null || !Object.prototype.hasOwnProperty.call(cur, seg)) return false;
+          cur = (cur as Record<string, unknown>)[seg];
+        }
+        return cur !== undefined && cur !== null && cur !== "";
+      },
+      assets: [],
+    });
   }
 
   /** 读取某版本的设计数据；缺失或非本编排产出则抛错。 */

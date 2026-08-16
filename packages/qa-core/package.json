@@ -7,6 +7,9 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "dependencies": {
+    "@imskin/contracts": "*"
+  },
   "scripts": {
     "test": "node --test test/*.test.ts"
   },
