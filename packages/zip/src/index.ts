@@ -7,3 +7,6 @@ export { crc32 } from "./crc32.ts";
 export { utf8Encode, utf8Decode, utf16leEncode, concatBytes } from "./bytes.ts";
 export { md5 } from "./md5.ts";
 export { zipStore, listZip, type ZipEntry } from "./zip.ts";
+export { sha256 } from "./sha256.ts";
+export { pngEncode } from "./png.ts";
+export { base64Encode, base64Decode } from "./base64.ts";
