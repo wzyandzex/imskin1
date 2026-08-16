@@ -173,3 +173,36 @@ test("JOB-001 outlet-status：分出口独立状态，单出口失败不牵连�
     server.close();
   }
 });
+
+test("SEC-001：非回环绑定且未配 key → 拒绝启动", async () => {
+  const svc = new AutomationService();
+  await assert.rejects(
+    startApiServer({ service: svc, host: "0.0.0.0", port: 0 }),
+    /SEC-001/,
+  );
+  // 配 key 后可正常监听非回环
+  const { server, port } = await startApiServer({ service: svc, host: "0.0.0.0", port: 0, apiKey: "k1" });
+  const res = await fetch(`http://127.0.0.1:${port}/v1/health`, { headers: { Authorization: "Bearer k1" } });
+  assert.equal(res.status, 200);
+  server.close();
+});
+
+test("SEC-001：job id 不可预测（UUID 片段，非自增）", async () => {
+  const svc = new AutomationService();
+  const j1 = svc.generateSync({ idea: "甲" });
+  const j2 = svc.generateSync({ idea: "乙" });
+  assert.match(j1.id, /^job-[0-9a-f]{8}$/);
+  assert.notEqual(j1.id, j2.id);
+});
+
+test("SEC-001：任务数量上限 + TTL 清理（注入小值）", async () => {
+  const svc = new AutomationService({ maxJobs: 2, jobTtlMs: 40 });
+  const a = svc.generateSync({ idea: "一" });
+  const b = svc.generateSync({ idea: "二" });
+  const c = svc.generateSync({ idea: "三" });
+  assert.equal(svc.getJob(a.id), undefined); // 最老被挤出
+  assert.ok(svc.getJob(b.id) && svc.getJob(c.id));
+  await new Promise((r) => setTimeout(r, 60));
+  svc.pruneJobs();
+  assert.equal(svc.getJob(c.id), undefined); // TTL 过期清理
+});

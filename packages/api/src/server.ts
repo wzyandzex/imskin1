@@ -13,6 +13,7 @@
  */
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import { createHash, timingSafeEqual } from "node:crypto";
 import type { AutomationService } from "./service.ts";
 
 export interface ServerOptions {
@@ -52,9 +53,12 @@ async function readBody(req: IncomingMessage): Promise<string> {
 }
 
 function authed(req: IncomingMessage, apiKey?: string): boolean {
-  if (!apiKey) return true; // 本机未配 key → 放行
+  if (!apiKey) return true; // 本机未配 key → 放行（startApiServer 已保证仅回环可达）
   const h = req.headers.authorization ?? "";
-  return h === `Bearer ${apiKey}`;
+  // SEC-001：常量时间比较（先哈希等长，防时序侧信道逐字节泄露 key）
+  const want = createHash("sha256").update(`Bearer ${apiKey}`, "utf8").digest();
+  const got = createHash("sha256").update(h, "utf8").digest();
+  return timingSafeEqual(want, got);
 }
 
 export function createApiServer(opts: ServerOptions): Server {
@@ -123,11 +127,16 @@ export function createApiServer(opts: ServerOptions): Server {
   });
 }
 
-/** 启动服务（返回实际端口）。 */
+/** 启动服务（返回实际端口）。SEC-001：非回环绑定必须配置 API key，拒绝无认证暴露。 */
 export function startApiServer(opts: ServerOptions): Promise<{ server: Server; port: number }> {
+  const host = opts.host ?? "127.0.0.1";
+  const isLoopback = ["127.0.0.1", "::1", "localhost"].includes(host);
+  if (!isLoopback && !opts.apiKey) {
+    return Promise.reject(new Error("SEC-001：绑定非回环地址（" + host + "）时必须配置 --api-key，拒绝无认证启动"));
+  }
   return new Promise((resolve) => {
     const server = createApiServer(opts);
-    server.listen(opts.port ?? 0, opts.host ?? "127.0.0.1", () => {
+    server.listen(opts.port ?? 0, host, () => {
       const addr = server.address();
       const port = typeof addr === "object" && addr ? addr.port : 0;
       resolve({ server, port });

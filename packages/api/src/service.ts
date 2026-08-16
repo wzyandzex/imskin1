@@ -13,6 +13,7 @@ import { SkinOrchestrator } from "@imskin/orchestrator";
 import { understandIntent, type LLMRegistry } from "@imskin/llm-core";
 import type { DesignBrief } from "@imskin/skin-gen";
 import { OUTLETS, OUTLET_API_KEYS, type Outlet } from "@imskin/contracts";
+import { randomUUID } from "node:crypto";
 
 /**
  * REST 出口键从领域契约派生（DOM-001）：传输层保留 camelCase 兼容既有端点，
@@ -63,19 +64,22 @@ export interface Job {
   updatedAt: number;
 }
 
-let jobSeq = 0;
-
 /** 自动化服务：编排 + LLM + 异步 job。 */
 export class AutomationService {
   readonly orch: SkinOrchestrator;
   private registry: LLMRegistry | null;
   private projectId: string;
   private jobs = new Map<string, Job>();
+  /** SEC-001：任务数量上限与 TTL（可注入小值用于测试）。 */
+  private readonly maxJobs: number;
+  private readonly jobTtlMs: number;
 
-  constructor(opts: { orch?: SkinOrchestrator; registry?: LLMRegistry | null; projectName?: string } = {}) {
+  constructor(opts: { orch?: SkinOrchestrator; registry?: LLMRegistry | null; projectName?: string; maxJobs?: number; jobTtlMs?: number } = {}) {
     this.orch = opts.orch ?? new SkinOrchestrator();
     this.registry = opts.registry ?? null;
     this.projectId = this.orch.createProject(opts.projectName ?? "自动化项目").id;
+    this.maxJobs = opts.maxJobs ?? 100;
+    this.jobTtlMs = opts.jobTtlMs ?? 30 * 60 * 1000;
   }
 
   /** 同步生成（确定性，快）：直接给 brief 用。 */
@@ -97,9 +101,31 @@ export class AutomationService {
   }
 
   private newJob(): Job {
-    const job: Job = { id: `job-${++jobSeq}`, status: "queued", progress: 0, createdAt: Date.now(), updatedAt: Date.now() };
+    this.pruneJobs();
+    // SEC-001：不可预测 job id（随机 UUID 前 8 hex，拒绝可枚举的自增 id）
+    const job: Job = { id: `job-${randomUUID().slice(0, 8)}`, status: "queued", progress: 0, createdAt: Date.now(), updatedAt: Date.now() };
+    // 数量上限：超出时丢弃最老任务（背压兜底；进程内存保护）
+    while (this.jobs.size >= this.maxJobs) {
+      let oldestKey: string | null = null;
+      let oldestAt = Infinity;
+      for (const [k, j] of this.jobs) {
+        if (j.createdAt < oldestAt) {
+          oldestAt = j.createdAt;
+          oldestKey = k;
+        }
+      }
+      if (oldestKey === null) break;
+      this.jobs.delete(oldestKey);
+    }
     this.jobs.set(job.id, job);
     return job;
+  }
+
+  /** SEC-001：清理过期任务（TTL 兜底，防止长期运行的内存增长；可显式传时钟测试）。 */
+  pruneJobs(now: number = Date.now()): void {
+    for (const [id, j] of this.jobs) {
+      if (now - j.updatedAt > this.jobTtlMs) this.jobs.delete(id);
+    }
   }
 
   private runGenerate(job: Job, input: GenerateJobInput): void {

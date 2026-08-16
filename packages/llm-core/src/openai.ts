@@ -9,6 +9,7 @@
 
 import type { ChatMessage, LLMProviderConfig, StructuredRequest } from "./types.ts";
 import { LLMError } from "./types.ts";
+import { assertSafeBaseUrl } from "./urlGuard.ts";
 
 const DEFAULT_TIMEOUT = 30_000;
 
@@ -54,6 +55,7 @@ interface ChatCompletionResponse {
 }
 
 async function post(baseUrl: string, path: string, headers: Record<string, string>, body: unknown, timeoutMs: number): Promise<ChatCompletionResponse> {
+  assertSafeBaseUrl(baseUrl); // SEC-002：请求前拦截非 https/内网/metadata 地址
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {

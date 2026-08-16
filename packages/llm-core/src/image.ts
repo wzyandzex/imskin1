@@ -9,6 +9,7 @@
 
 import type { LLMProviderConfig } from "./types.ts";
 import { LLMError } from "./types.ts";
+import { assertSafeBaseUrl } from "./urlGuard.ts";
 
 export interface ImageGenRequest {
   /** 文生图提示词。 */
@@ -37,6 +38,7 @@ const DEFAULT_TIMEOUT = 120_000; // 图像生成较慢
 
 /** 文生图（OpenAI Images 兼容）。失败抛 LLMError（调用方决定降级）。 */
 export async function generateImage(cfg: LLMProviderConfig, req: ImageGenRequest): Promise<GeneratedImage> {
+  assertSafeBaseUrl(cfg.baseUrl); // SEC-002：生成请求前拦截
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), cfg.timeoutMs ?? DEFAULT_TIMEOUT);
   try {
@@ -65,6 +67,7 @@ export async function generateImage(cfg: LLMProviderConfig, req: ImageGenRequest
       return { bytes, source: "b64" };
     }
     if (item?.url) {
+      assertSafeBaseUrl(item.url); // SEC-002：模型返回的图片 URL 同样过边界检查
       const img = await fetch(item.url);
       if (!img.ok) throw new LLMError(`图像下载失败: HTTP ${img.status}`, true);
       return { bytes: new Uint8Array(await img.arrayBuffer()), source: "url" };

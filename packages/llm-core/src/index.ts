@@ -16,6 +16,7 @@ export type {
 } from "./types.ts";
 export { LLMError } from "./types.ts";
 export { callOpenAICompatible } from "./openai.ts";
+export { assertSafeBaseUrl, isPrivateOrMetadataHost, isLoopbackHost } from "./urlGuard.ts";
 export { LLMRegistry, registryFromEnv } from "./registry.ts";
 export { understandIntent } from "./intent.ts";
 export { understandFeedback, type FeedbackIntent } from "./feedback.ts";
