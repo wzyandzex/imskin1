@@ -757,11 +757,14 @@ export function App() {
     e.target.value = ""; // 允许重复导入同一文件
   };
 
-  /** 取某版本当前模式（深/浅）的皮肤：themeMode="auto" 用主版本，否则用派生变体。 */
-  const skinOf = (versionId: string): SkinManifest => {
+  /** 取某版本当前模式（深/浅）皮肤：themeMode="auto" 用主版本，否则用派生变体。
+   *  PIPE-001：指定 outlet 时优先用平台定向覆盖（outletOverrides）的皮肤/变体。 */
+  const skinOf = (versionId: string, targetOutlet?: Outlet): SkinManifest => {
     const d = orch.readDesign(versionId);
-    if (themeMode === "auto" || !d.variant) return d.skin;
-    return d.spec.theme === themeMode ? d.skin : d.variant.skin;
+    const o = targetOutlet ? d.outletOverrides?.[targetOutlet] : undefined;
+    if (themeMode === "auto" || !(o?.variant ?? d.variant)) return o?.skin ?? d.skin;
+    const theme = o?.spec.theme ?? d.spec.theme;
+    return theme === themeMode ? (o?.skin ?? d.skin) : (o?.variant.skin ?? d.variant!.skin);
   };
 
   /** 点选反馈包装：细粒度元素点选（FR-FEEDBACK-5 增强）。
@@ -805,7 +808,7 @@ export function App() {
   // PRE-001：平台×设备组合成 Outlet 传入预览（领域枚举来自 @imskin/contracts）。
   const outlet = outletFromParts(platform, device === "pc" ? "pc" : "android") ?? "sogou_pc";
   const renderPreview = (versionId: string, suffix: string) => {
-    const s = skinOf(versionId);
+    const s = skinOf(versionId, outlet); // PIPE-001：预览按当前出口显示定向覆盖
     return device === "mobile" ? (
       <MobileFrame dpi={dpi}>
         <PreviewRuntime

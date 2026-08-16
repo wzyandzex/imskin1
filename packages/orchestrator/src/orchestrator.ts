@@ -41,7 +41,7 @@ import { provenance } from "./provenance.ts";
 import { skinToSkinIni, type ToSkinIniOptions } from "./toSkinIni.ts";
 import { skinToBaiduMobile } from "./toBaidu.ts";
 import { skinToBaiduPc } from "./toBaiduPc.ts";
-import type { Outlet } from "@imskin/contracts";
+import { outletDeviceClass, outletVendor, type Outlet } from "@imskin/contracts";
 
 /** 版本 data 里承载的一版设计全量产出。 */
 export interface VersionDesign {
@@ -53,7 +53,21 @@ export interface VersionDesign {
   qa: QAReport;
   provenance: string;
   /** 若该版本由一次反馈迭代产生，记录反馈溯源。 */
-  feedback?: { text: string; type: Classification["type"]; scope: string };
+  feedback?: { text: string; type: Classification["type"]; scope: string; targetOutlets?: Outlet[] };
+  /**
+   * PIPE-001 平台定向反馈的出口覆盖（通往 TargetVariant 的中间态，ADR-002）：
+   * 只存被"百度/搜狗这边…"类反馈定向修改过的出口；其余出口沿用主设计。
+   * 通用（非平台）反馈会整体重生成主设计并**清空覆盖**——四端重新同步。
+   */
+  outletOverrides?: Partial<Record<Outlet, { spec: VisualSpec; skin: SkinManifest; variant: { spec: VisualSpec; skin: SkinManifest } }>>;
+}
+
+/** PIPE-001：从分类 hints 里解析被点名的厂商 → 其两出口；无指代或双指代返回 null（走通用路径）。 */
+function platformTargetOutlets(hints: string[]): Outlet[] | null {
+  const baidu = hints.some((h) => h.includes("百度"));
+  const sogou = hints.some((h) => h.includes("搜狗"));
+  if (baidu === sogou) return null; // 都无（泛指）或都有（等价于全部 → 与通用路径一致）
+  return baidu ? ["baidu_pc", "baidu_android"] : ["sogou_pc", "sogou_android"];
 }
 
 export interface GenerateResult {
@@ -198,13 +212,44 @@ export class SkinOrchestrator {
   /** A5 同步（确定性）：一句反馈 → 分类/路由 → 只重跑受影响层 → fork 出新版本。 */
   applyFeedback(versionId: string, text: string): FeedbackResult {
     const prev = this.readDesign(versionId);
+    // PIPE-001：hints 透传——平台类反馈的 scope 写明厂商，并据此定向目标出口。
     const classification = classifyFeedback(text);
-    const route = routeFeedback(classification.type);
+    const route = routeFeedback(classification.type, classification.hints);
     const meta = metaOf(prev.skin);
+    const targetOutlets = route.rerunFrom === "A3-platform" ? platformTargetOutlets(classification.hints) : null;
 
     let brief = prev.brief;
     let spec = prev.spec;
     let skin = prev.skin;
+
+    // PIPE-001 平台定向：只重跑被点名厂商的两出口（A3 适配 + A4 对应分支），
+    // 主设计（brief/spec/skin/variant）不动——未点名出口导出字节不变（token diff 可证）。
+    if (targetOutlets) {
+      const overrides: NonNullable<VersionDesign["outletOverrides"]> = { ...(prev.outletOverrides ?? {}) };
+      for (const o of targetOutlets) {
+        const baseSpec = overrides[o]?.spec ?? prev.spec;
+        const oSpec = applyToSpec(baseSpec, text);
+        const oMeta = { ...meta, platform: outletVendor(o), device: outletDeviceClass(o) === "pc" ? ("pc" as const) : ("mobile" as const) };
+        const oSkin = composeSkin(oSpec, oMeta);
+        overrides[o] = { spec: oSpec, skin: oSkin, variant: deriveVariant(prev.brief, oSpec, oSkin) };
+      }
+      const design: VersionDesign = {
+        brief,
+        spec,
+        skin,
+        variant: prev.variant,
+        qa: prev.qa, // 主设计未变，QA 结论沿用
+        provenance: provenance({ parent: prev.provenance, text, type: classification.type, outlets: targetOutlets.join(",") }),
+        feedback: { text, type: classification.type, scope: route.scope, targetOutlets },
+        outletOverrides: overrides,
+      };
+      const version = this.store.fork(versionId, {
+        data: design as unknown as Record<string, unknown>,
+        status: prev.qa.passed ? "ready" : "draft",
+        label: `反馈·${classification.type}·${targetOutlets.map(outletVendor).join("/")}`,
+      });
+      return { version, classification, route, design };
+    }
 
     switch (route.rerunFrom) {
       case "A1":
@@ -226,6 +271,7 @@ export class SkinOrchestrator {
     const qa = checkSkin(skin);
     const specChanged = route.rerunFrom === "A1" || route.rerunFrom === "A2" || route.rerunFrom === "A3" || route.rerunFrom === "A3-platform";
     const variant = specChanged ? deriveVariant(brief, spec, skin) : prev.variant;
+    // 通用（非定向）反馈重生成主设计 → 清空出口覆盖（四端重新同步，ADR-002）。
     const design: VersionDesign = {
       brief,
       spec,
@@ -337,21 +383,26 @@ export class SkinOrchestrator {
     };
   }
 
-  /** A4 导出四出口（可附带 A3 图像资产）：images 缺省则仅配置骨架。 */
+  /** A4 导出四出口（可附带 A3 图像资产）：images 缺省则仅配置骨架。
+   *  PIPE-001：各出口优先用 outletOverrides 的定向皮肤（无覆盖则用 opts.skin/主设计）。 */
   exportSkinSet(
     versionId: string,
     opts: { skin?: SkinManifest; images?: { path: string; data: Uint8Array }[] } = {},
   ): { sogouPc: Uint8Array; sogouMobile: Uint8Array; baiduPc: Uint8Array; baiduMobile: Uint8Array } {
     const design = this.readDesign(versionId);
-    const skin = opts.skin ?? design.skin;
+    const byOutlet = (o: Outlet): SkinManifest => design.outletOverrides?.[o]?.skin ?? opts.skin ?? design.skin;
     const images = opts.images ?? [];
-    const ini = skinToSkinIni(skin);
-    const sogouPc = buildSsf({ id: skin.id, name: skin.name, images, ini });
-    const sogouMobile = buildSogouMobileSsf({ id: skin.id, name: skin.name, theme: { name: skin.name, id: skin.id }, res: images });
-    const baiduPcProject = skinToBaiduPc(skin);
+    const sp = byOutlet("sogou_pc");
+    const ini = skinToSkinIni(sp);
+    const sogouPc = buildSsf({ id: sp.id, name: sp.name, images, ini });
+    const sm = byOutlet("sogou_android");
+    const sogouMobile = buildSogouMobileSsf({ id: sm.id, name: sm.name, theme: { name: sm.name, id: sm.id }, res: images });
+    const bp = byOutlet("baidu_pc");
+    const baiduPcProject = skinToBaiduPc(bp);
     baiduPcProject.images = images;
     const baiduPc = buildBps(baiduPcProject);
-    const baiduMobileProject = skinToBaiduMobile(skin);
+    const bm = byOutlet("baidu_android");
+    const baiduMobileProject = skinToBaiduMobile(bm);
     baiduMobileProject.images = images;
     const baiduMobile = buildBds(baiduMobileProject);
     return { sogouPc, sogouMobile, baiduPc, baiduMobile };
@@ -368,7 +419,11 @@ export class SkinOrchestrator {
     outlet: Outlet,
     opts: { skin?: SkinManifest; images?: { path: string; data: Uint8Array }[] } = {},
   ): OutletExportResult {
-    const common = { skin: opts.skin, images: opts.images };
+    // PIPE-001：出口覆盖优先（平台定向反馈的产物）> 调用方主题变体 > 主设计。
+    // 注：主题强制模式与出口覆盖的组合语义随 TargetVariant 完整落地（ADR-002 后续切片）。
+    const design = this.readDesign(versionId);
+    const overrideSkin = design.outletOverrides?.[outlet]?.skin;
+    const common = { skin: overrideSkin ?? opts.skin, images: opts.images };
     try {
       switch (outlet) {
         case "sogou_pc": {
