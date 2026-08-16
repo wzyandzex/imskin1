@@ -24,6 +24,15 @@ function pointer(el: HTMLElement, type: string, clientY: number) {
   fireEvent(el, ev);
 }
 
+/** 候选滑动（MOB-001）：带 clientX 的 pointerdown/up 对，模拟横向 swipe。 */
+function swipeX(el: HTMLElement, x1: number, x2: number) {
+  for (const [type, clientX] of [["pointerdown", x1], ["pointerup", x2]] as const) {
+    const ev = new MouseEvent(type, { bubbles: true, cancelable: true, clientX, clientY: 100 });
+    Object.defineProperty(ev, "pointerId", { value: 1, configurable: true });
+    fireEvent(el, ev);
+  }
+}
+
 describe("PreviewRuntime 真实交互", () => {
   test("物理键盘打 nihao + 空格 → 落地文本框出现「你好」", async () => {
     const user = userEvent.setup();
@@ -215,6 +224,51 @@ describe("PreviewRuntime 真实交互", () => {
     // 回到九宫格（字母组特征仍在）
     expect(within(kb).getByText("abc")).toBeTruthy();
     expect(within(kb).getByText("wxyz")).toBeTruthy();
+  });
+
+  test("表情面板（MOB-001）：符号面板进「☺」→ 点 emoji 字面插入 → 返回拼音", async () => {
+    const user = userEvent.setup();
+    render(<PreviewRuntime skin={coolMinimal} />);
+    const kb = screen.getByTestId("vkeyboard");
+
+    await user.click(within(kb).getByRole("button", { name: "符" }));
+    await user.click(within(kb).getByRole("button", { name: "☺" }));
+    // 表情面板特征：emoji 键出现、字母键消失
+    expect(within(kb).getByText("😀")).toBeTruthy();
+    expect(kb.querySelector('[data-key="q"]')).toBeNull();
+
+    await user.click(within(kb).getByRole("button", { name: "❤️" }));
+    expect(committed()).toBe("❤️");
+
+    await user.click(within(kb).getByRole("button", { name: "返回" }));
+    expect(kb.querySelector('[data-key="q"]')).toBeTruthy();
+  });
+
+  test("候选横向滑动翻页（MOB-001）：候选词上左滑下一页、右滑回上一页，滑动不误选词", async () => {
+    const user = userEvent.setup();
+    render(<PreviewRuntime skin={coolMinimal} />);
+    await focusStage();
+    await user.keyboard("shijian"); // 候选 = 短语「时间」+ shi 单字若干 → 超过一页
+
+    const bar = screen.getByTestId("candidate-bar");
+    const firstChip = (): HTMLElement =>
+      within(bar).getAllByRole("button").find((b) => b.classList.contains("candidate"))!;
+
+    // 页 1 首选是「时间」
+    expect(firstChip().textContent).toContain("时间");
+
+    // 候选词上左滑 80px（≥阈值 40）→ 下一页；滑动不应把手指起始词选上屏
+    swipeX(firstChip(), 200, 120);
+    expect(firstChip().textContent).not.toContain("时间");
+    expect(committed()).toBe(""); // 未误选词
+
+    // 右滑回上一页 → 首选恢复「时间」
+    swipeX(firstChip(), 120, 200);
+    expect(firstChip().textContent).toContain("时间");
+
+    // 小位移（<阈值）仍是点选：点首选上屏
+    swipeX(firstChip(), 100, 95);
+    expect(committed()).toBe("时间");
   });
 
   test("位图皮肤：键盘与候选栏 image 背景各渲染九宫格 Canvas 层，且不影响输入（§4.7）", async () => {

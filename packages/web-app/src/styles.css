@@ -894,6 +894,10 @@ body {
   opacity: 0.5;
   cursor: not-allowed;
 }
+/* MOB-001：候选词手势（滑动翻页 + 抬起选词）需要横向指针流，禁浏览器默认横向平移 */
+.candidate {
+  touch-action: pan-y;
+}
 /* 平台状态条（PRE-001）：当前目标徽标 + 状态栏差异 + 模拟项标注 */
 .pick-mode-hint {
   font-size: 12px;

@@ -37,6 +37,7 @@ const TO_T9: KeyCap = { label: "九", action: { type: "mode", value: "t9" }, spe
 const TO_QWERTY: KeyCap = { label: "拼", action: { type: "mode", value: "qwerty" }, special: true, flex: 1.3 };
 const TO_SYMBOL: KeyCap = { label: "符", action: { type: "panel", value: "symbol" }, special: true, flex: 1.3 };
 const TO_NUMBER: KeyCap = { label: "123", action: { type: "panel", value: "number" }, special: true, flex: 1.3 };
+const TO_EMOJI: KeyCap = { label: "☺", action: { type: "panel", value: "emoji" }, special: true, flex: 1.2 };
 const TO_PINYIN: KeyCap = { label: "返回", action: { type: "panel", value: "pinyin" }, special: true, flex: 1.5 };
 
 /** 字面插入键（符号/数字面板用）。 */
@@ -64,27 +65,37 @@ export const T9_LAYOUT: KeyCap[][] = [
   [TO_QWERTY, TO_SYMBOL, SPACE, TO_NUMBER, ENTER],
 ];
 
-/** 符号面板：常用中文标点/符号，字面插入；底行返回拼音。 */
+/** 符号面板：常用中文标点/符号，字面插入；底行返回拼音 + 数字/表情入口。 */
 export const SYMBOL_LAYOUT: KeyCap[][] = [
   "，。？！、；：".split("").map((c) => lit(c)),
   "“”‘’（）【】".split("").map((c) => lit(c)),
   "…—～·《》「」".split("").map((c) => lit(c)),
   "@#￥%&*+-=".split("").map((c) => lit(c)),
-  [TO_PINYIN, TO_NUMBER, SPACE, BACKSPACE, ENTER],
+  [TO_PINYIN, TO_NUMBER, TO_EMOJI, SPACE, BACKSPACE, ENTER],
 ];
 
-/** 数字面板：计算器式数字 + 常用符号，字面插入；底行返回拼音。 */
+/** 数字面板：计算器式数字 + 常用符号，字面插入；底行返回拼音 + 符号/表情入口。 */
 export const NUMBER_LAYOUT: KeyCap[][] = [
   "123".split("").map((c) => lit(c)),
   "456".split("").map((c) => lit(c)),
   "789".split("").map((c) => lit(c)),
   [lit("."), lit("0"), BACKSPACE],
-  [TO_PINYIN, TO_SYMBOL, SPACE, ENTER],
+  [TO_PINYIN, TO_SYMBOL, TO_EMOJI, SPACE, ENTER],
 ];
 
-/** 按拼音模式 + 当前面板选布局。面板优先（符号/数字面板与拼音模式正交）。 */
+/** 表情面板（MOB-001）：常用 emoji 字面插入；底行返回拼音 + 符号/数字入口。
+ *  显式数组（不用 split）：emoji 常带变体选择符（如 ❤️ = U+2764+FE0F），任何切割都易拆坏。 */
+export const EMOJI_LAYOUT: KeyCap[][] = [
+  ["😀", "😁", "😂", "🤣", "😊", "😍", "😎", "🤔", "😐", "😴", "😭", "😡"].map((c) => lit(c)),
+  ["👍", "👏", "🙏", "💪", "🎉", "❤️", "💔", "✨", "🌟", "🍀", "🌸", "🍎"].map((c) => lit(c)),
+  ["☕", "🎮", "📚", "🚀", "🏠", "✉️", "🌙", "☀️", "🌈", "🎵", "🍕", "🐱"].map((c) => lit(c)),
+  [TO_PINYIN, TO_SYMBOL, TO_NUMBER, SPACE, BACKSPACE, ENTER],
+];
+
+/** 按拼音模式 + 当前面板选布局。面板优先（符号/数字/表情面板与拼音模式正交）。 */
 export function layoutFor(mode: "qwerty" | "t9", panel: PanelKind = "pinyin"): KeyCap[][] {
   if (panel === "symbol") return SYMBOL_LAYOUT;
   if (panel === "number") return NUMBER_LAYOUT;
+  if (panel === "emoji") return EMOJI_LAYOUT;
   return mode === "t9" ? T9_LAYOUT : QWERTY_LAYOUT;
 }

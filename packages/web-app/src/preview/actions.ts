@@ -5,8 +5,8 @@
 
 import type { InputSession, InputMode } from "@imskin/pinyin-engine";
 
-/** 面板种类：拼音键盘 / 符号面板 / 数字面板（后两者为 UI 层状态，与 session 的拼音模式正交）。 */
-export type PanelKind = "pinyin" | "symbol" | "number";
+/** 面板种类：拼音键盘 / 符号面板 / 数字面板 / 表情面板（后三者为 UI 层状态，与 session 的拼音模式正交）。 */
+export type PanelKind = "pinyin" | "symbol" | "number" | "emoji";
 
 export type KeyAction =
   | { type: "input"; value: string }
