@@ -12,10 +12,11 @@
  */
 
 import { writeFile, mkdir } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { AutomationService } from "./service.ts";
 import { startApiServer } from "./server.ts";
 import { registryFromEnv } from "@imskin/llm-core";
+import { buildEvidenceManifest } from "./evidence.ts";
 
 function parseArgs(argv: string[]): { cmd: string; positional: string[]; flags: Record<string, string> } {
   const [cmd = "", ...rest] = argv;
@@ -98,6 +99,27 @@ async function cmdServe(flags: Record<string, string>): Promise<void> {
   console.log(`  GET  /v1/versions/:id/export?outlet=sogouPc  导出生出口包`);
 }
 
+/** EVID-001a：为待验证的皮肤包生成证据 manifest 骨架（docs/05 §6）。 */
+async function cmdEvidence(flags: Record<string, string>): Promise<void> {
+  const artifact = flags.artifact;
+  if (!artifact) throw new Error('用法: imskin evidence --artifact <包路径> [--outlet sogou_pc] [--out manifest.json] [--client 名] [--client-version 版本]');
+  const manifest = await buildEvidenceManifest({
+    outlet: flags.outlet ?? "sogou_pc",
+    artifactPath: artifact,
+    clientName: flags.client,
+    clientVersion: flags["client-version"],
+  });
+  const json = JSON.stringify(manifest, null, 2);
+  if (flags.out) {
+    await mkdir(dirname(flags.out), { recursive: true });
+    await writeFile(flags.out, json, "utf8");
+    console.log(`✔ 证据骨架已写入 ${flags.out}`);
+  } else {
+    console.log(json);
+  }
+  console.log(`  下一步：按 docs/evidence/outlets/${manifest.outlet === "sogou_pc" ? "sogou-pc" : manifest.outlet}/README.md 完成真机验证并回填场景结果`);
+}
+
 export async function runCli(argv: string[]): Promise<void> {
   const { cmd, positional, flags } = parseArgs(argv);
   switch (cmd) {
@@ -105,10 +127,12 @@ export async function runCli(argv: string[]): Promise<void> {
       return cmdGenerate(positional, flags);
     case "serve":
       return cmdServe(flags);
+    case "evidence":
+      return cmdEvidence(flags);
     case "":
     case "help":
     case "--help":
-      console.log("用法: imskin generate <想法> [--name 名字] [--out dir] [--confirm] | imskin serve [--port 7317] [--api-key KEY]");
+      console.log("用法: imskin generate <想法> [--name 名字] [--out dir] [--confirm] | imskin serve [--port 7317] [--api-key KEY] | imskin evidence --artifact <包> [--outlet sogou_pc] [--out manifest.json]");
       return;
     default:
       throw new Error(`未知命令: ${cmd}（generate | serve | help）`);

@@ -206,3 +206,33 @@ test("SEC-001：任务数量上限 + TTL 清理（注入小值）", async () => 
   svc.pruneJobs();
   assert.equal(svc.getJob(c.id), undefined); // TTL 过期清理
 });
+
+test("EVID-001a evidence：生成 manifest 骨架（sha256 锁定、场景全 pending、缺参报用法）", async () => {
+  const { mkdtemp, writeFile, readFile } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { createHash } = await import("node:crypto");
+  const { runCli } = await import("../src/cli.ts");
+
+  const dir = await mkdtemp(join(tmpdir(), "evid-"));
+  const artifact = join(dir, "demo-sogou-pc.ssf");
+  const payload = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]);
+  await writeFile(artifact, payload);
+  const out = join(dir, "manifest.json");
+
+  await runCli(["evidence", "--artifact", artifact, "--out", out, "--client", "搜狗输入法", "--client-version", "14.9"]);
+  const m = JSON.parse(await readFile(out, "utf8")) as {
+    outlet: string; artifact: { sha256: string; byteLength: number };
+    scenarios: Array<{ result: string }>; requiredScenarios: string[]; client: { version: string };
+  };
+  assert.equal(m.outlet, "sogou_pc");
+  assert.equal(m.artifact.byteLength, 8);
+  assert.equal(m.artifact.sha256, createHash("sha256").update(payload).digest("hex")); // hash 锁定
+  assert.equal(m.client.version, "14.9");
+  assert.equal(m.scenarios.length, 7);
+  assert.ok(m.scenarios.every((s) => s.result === "pending")); // 未验证不冒充
+  assert.deepEqual(m.requiredScenarios, ["recognized", "installed", "listed", "enabled", "visuals", "states", "restart"]);
+
+  // 缺 artifact → 用法错误
+  await assert.rejects(runCli(["evidence"]), /用法/);
+});
