@@ -42,6 +42,7 @@ import { skinToSkinIni, type ToSkinIniOptions } from "./toSkinIni.ts";
 import { skinToBaiduMobile } from "./toBaidu.ts";
 import { skinToBaiduPc } from "./toBaiduPc.ts";
 import { outletDeviceClass, outletVendor, profileForOutlet, type Outlet } from "@imskin/contracts";
+import { paintStatusBarIcons, assetsToZipEntries, type StoredAsset } from "./genAssets.ts";
 
 /** 版本 data 里承载的一版设计全量产出。 */
 export interface VersionDesign {
@@ -60,6 +61,11 @@ export interface VersionDesign {
    * 通用（非平台）反馈会整体重生成主设计并**清空覆盖**——四端重新同步。
    */
   outletOverrides?: Partial<Record<Outlet, { spec: VisualSpec; skin: SkinManifest; variant: { spec: VisualSpec; skin: SkinManifest } }>>;
+  /**
+   * A3-001b：按出口注册的确定性资产（base64 字节随快照持久化）。
+   * 旧版本快照无此字段 → assetStatus 按空清单处理（缺口如实）。
+   */
+  assets?: Record<Outlet, StoredAsset[]>;
 }
 
 /** PIPE-001：从分类 hints 里解析被点名的厂商 → 其两出口；无指代或双指代返回 null（走通用路径）。 */
@@ -195,6 +201,9 @@ export class SkinOrchestrator {
       mood: brief.mood,
     });
     const qa = checkSkin(skin);
+    // A3-001b：确定性资产（状态栏图标）注册进快照——按出口生效 spec 的选中色绘制，
+    // 每口一份（平台覆盖版本沿用其覆盖 spec 重绘，见 applyFeedback 平台分支）。
+    const assets = this.paintAssetsFor(spec);
     const design: VersionDesign = {
       brief,
       spec,
@@ -202,6 +211,7 @@ export class SkinOrchestrator {
       variant: deriveVariant(brief, spec, skin),
       qa,
       provenance: provenance({ brief }),
+      assets,
     };
     const version = this.store.addVersion(projectId, {
       parentId: parentId ?? null,
@@ -210,6 +220,18 @@ export class SkinOrchestrator {
       label: meta.name,
     });
     return { version, design };
+  }
+
+  /** A3-001b：按 spec 为四出口生成确定性资产（当前 = 状态栏图标集；几何风格，
+   *  knownLimitation 见 genAssets.ts 头注与风险台账 R-01 的字段名待核）。 */
+  private paintAssetsFor(spec: VisualSpec): Record<Outlet, StoredAsset[]> {
+    const paint = () => paintStatusBarIcons({ selectedFill: spec.candidateBar.selectedFill, candidateText: spec.candidateBar.candidate });
+    return {
+      sogou_pc: paint(),
+      sogou_android: paint(),
+      baidu_pc: paint(),
+      baidu_android: paint(),
+    };
   }
 
   /**
@@ -235,12 +257,15 @@ export class SkinOrchestrator {
     // 主设计（brief/spec/skin/variant）不动——未点名出口导出字节不变（token diff 可证）。
     if (targetOutlets) {
       const overrides: NonNullable<VersionDesign["outletOverrides"]> = { ...(prev.outletOverrides ?? {}) };
+      const nextAssets: Record<Outlet, StoredAsset[]> = { ...(prev.assets ?? ({} as Record<Outlet, StoredAsset[]>)) };
       for (const o of targetOutlets) {
         const baseSpec = overrides[o]?.spec ?? prev.spec;
         const oSpec = applyToSpec(baseSpec, text);
         const oMeta = { ...meta, platform: outletVendor(o), device: outletDeviceClass(o) === "pc" ? ("pc" as const) : ("mobile" as const) };
         const oSkin = composeSkin(oSpec, oMeta);
         overrides[o] = { spec: oSpec, skin: oSkin, variant: deriveVariant(prev.brief, oSpec, oSkin) };
+        // A3-001b：覆盖出口的资产按覆盖 spec 重绘（如选中色被定向修改）
+        nextAssets[o] = this.paintAssetsFor(oSpec)[o];
       }
       const design: VersionDesign = {
         brief,
@@ -251,6 +276,7 @@ export class SkinOrchestrator {
         provenance: provenance({ parent: prev.provenance, text, type: classification.type, outlets: targetOutlets.join(",") }),
         feedback: { text, type: classification.type, scope: route.scope, targetOutlets },
         outletOverrides: overrides,
+        assets: nextAssets,
       };
       const version = this.store.fork(versionId, {
         data: design as unknown as Record<string, unknown>,
@@ -281,6 +307,8 @@ export class SkinOrchestrator {
     const specChanged = route.rerunFrom === "A1" || route.rerunFrom === "A2" || route.rerunFrom === "A3" || route.rerunFrom === "A3-platform";
     const variant = specChanged ? deriveVariant(brief, spec, skin) : prev.variant;
     // 通用（非定向）反馈重生成主设计 → 清空出口覆盖（四端重新同步，ADR-002）。
+    // A3-001b：spec 变化时按新 spec 重绘资产（颜色/字号反馈会改变图标着色）；
+    // spec 未变（interaction/A4）沿用上一版资产。
     const design: VersionDesign = {
       brief,
       spec,
@@ -289,6 +317,7 @@ export class SkinOrchestrator {
       qa,
       provenance: provenance({ parent: prev.provenance, text, type: classification.type }),
       feedback: { text, type: classification.type, scope: route.scope },
+      assets: specChanged ? this.paintAssetsFor(spec) : prev.assets,
     };
     const version = this.store.fork(versionId, {
       data: design as unknown as Record<string, unknown>,
@@ -433,6 +462,13 @@ export class SkinOrchestrator {
     const design = this.readDesign(versionId);
     const overrideSkin = design.outletOverrides?.[outlet]?.skin;
     const common = { skin: overrideSkin ?? opts.skin, images: opts.images };
+    // A3-001c：黄金出口打入快照内注册的状态栏图标（字段名 PROVISIONAL，R-01 真机核对）
+    if (outlet === "sogou_pc") {
+      const stored = this.readDesign(versionId).assets?.sogou_pc;
+      if (stored && stored.length > 0) {
+        common.images = [...(opts.images ?? []), ...assetsToZipEntries(stored)];
+      }
+    }
     try {
       switch (outlet) {
         case "sogou_pc": {
@@ -504,7 +540,8 @@ export class SkinOrchestrator {
         }
         return cur !== undefined && cur !== null && cur !== "";
       },
-      assets: [],
+      // A3-001b：消费快照内注册的资产（StoredAsset.descriptor 满足契约守卫）
+      assets: (design.assets?.[outlet] ?? []).map((a) => a.descriptor),
     });
   }
 
