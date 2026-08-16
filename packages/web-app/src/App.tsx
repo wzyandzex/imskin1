@@ -137,6 +137,14 @@ const OUTLET_FILE_STEM: Record<Outlet, string> = {
   baidu_android: "baidu-mobile.bds",
 };
 
+/** QA-001：出口状态卡的显示名。 */
+const OUTLET_LABEL: Record<Outlet, string> = {
+  sogou_pc: "搜狗 PC",
+  sogou_android: "搜狗 Android",
+  baidu_pc: "百度 PC",
+  baidu_android: "百度 Android",
+};
+
 /** 细粒度可点选元素（FR-FEEDBACK-5 增强）：点选哪块就只改哪块。token 命中 applyToSpec 的目标词。 */
 const PICKABLE: Record<string, PickedElement> = {
   candidate: { label: "候选词", token: "候选" },
@@ -1058,6 +1066,25 @@ export function App() {
                 ))}
               </div>
             )}
+
+            {/* QA-001：四出口交付等级与缺口（诚实状态卡——为什么还不能称"可安装"） */}
+            <details className="outlet-status" data-testid="outlet-status">
+              <summary>四出口交付状态（当前均为 structural，展开看缺口）</summary>
+              {OUTLETS.map((o) => {
+                const a = orch.outletDeliveryLevel(currentId, o);
+                return (
+                  <div key={o} className="outlet-status-row" data-testid={`outlet-status-${o}`}>
+                    <b>{OUTLET_LABEL[o]}</b>
+                    <span className={`dl dl-${a.level}`}>{a.level}</span>
+                    {a.blockers.length > 0 ? (
+                      <ul>{a.blockers.map((b) => <li key={b}>{b}</li>)}</ul>
+                    ) : (
+                      <span className="dl-ok">无缺口（install_candidate）</span>
+                    )}
+                  </div>
+                );
+              })}
+            </details>
 
             {/* FR-EXPORT-2：导出前的可读性一键修复（只列 error；修复作为版本节点可回退） */}
             {qaErrors.length > 0 && (

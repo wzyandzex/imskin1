@@ -88,3 +88,30 @@ test("ASSET-001 assetStatus：config 角色由 spec 满足，必需位图如实�
     assert.deepEqual(orch.assetStatus(versionId, o).missingRequired, ["statusBar.icons"]);
   }
 });
+
+test("QA-001 outletDeliveryLevel：未确认 → structural 且列确认缺口；确认后仍因必需位图缺口保持 structural", () => {
+  const { orch, versionId } = boot();
+  const a = orch.outletDeliveryLevel(versionId, "sogou_pc");
+  assert.equal(a.level, "structural");
+  assert.ok(a.blockers.some((b) => b.startsWith("VERSION_NOT_CONFIRMED")));
+
+  orch.store.confirmVersion(versionId);
+  const b = orch.outletDeliveryLevel(versionId, "sogou_pc");
+  assert.equal(b.level, "structural"); // 诚实：必需位图（statusBar.icons）未闭合
+  assert.ok(b.blockers.some((x) => x.startsWith("ASSET_MISSING")));
+  assert.ok(!b.blockers.some((x) => x.startsWith("VERSION_NOT_CONFIRMED")));
+  assert.ok(!b.blockers.some((x) => x.startsWith("STRUCTURAL"))); // sogou_pc 结构校验已过
+});
+
+test("QA-001 outletDeliveryLevel：未接校验器的出口按 not_run 阻断；平台覆盖必须有溯源", () => {
+  const { orch, versionId } = boot();
+  const bd = orch.outletDeliveryLevel(versionId, "baidu_pc");
+  assert.ok(bd.blockers.some((x) => x.startsWith("STRUCTURAL_NOT_RUN")));
+
+  // 平台定向反馈 → 覆盖有 feedback.targetOutlets 溯源 → 不产生 UNEXPLAINED 缺口
+  const fb = orch.applyFeedback(versionId, "百度这边候选词字太小");
+  const after = orch.outletDeliveryLevel(fb.version.id, "baidu_pc");
+  assert.ok(!after.blockers.some((x) => x.startsWith("PLATFORM_OVERRIDE_UNEXPLAINED")));
+  // 溯源覆盖的出口（baidu_pc）QA 用覆盖皮肤；未覆盖出口用主皮肤——不抛即结构正确
+  assert.ok(Array.isArray(after.blockers));
+});

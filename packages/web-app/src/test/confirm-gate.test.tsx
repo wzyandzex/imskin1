@@ -66,3 +66,23 @@ describe("UX-003 定稿确认门禁", () => {
     expect(currentStatus()).not.toBe("confirmed");
   });
 });
+
+describe("QA-001 四出口交付状态卡", () => {
+  test("状态卡列出四口等级与缺口；确认版本后确认缺口消失、位图缺口仍在（诚实）", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    for (const o of ["sogou_pc", "sogou_android", "baidu_pc", "baidu_android"]) {
+      const row = screen.getByTestId(`outlet-status-${o}`);
+      expect(row.textContent).toContain("structural");
+    }
+    // 未确认：四口都有确认缺口提示
+    expect(screen.getByTestId("outlet-status-sogou_pc").textContent).toContain("确认此版本");
+
+    await user.click(screen.getByTestId("confirm-version"));
+    const sgRow = screen.getByTestId("outlet-status-sogou_pc");
+    expect(sgRow.textContent).not.toContain("确认此版本");
+    expect(sgRow.textContent).toContain("statusBar.icons"); // 必需位图缺口如实显示
+    // 未接校验器的出口显示 not_run
+    expect(screen.getByTestId("outlet-status-baidu_pc").textContent).toContain("STRUCTURAL_NOT_RUN");
+  });
+});

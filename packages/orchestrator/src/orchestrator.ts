@@ -508,6 +508,59 @@ export class SkinOrchestrator {
     });
   }
 
+  /**
+   * QA-001：某出口的交付等级评估（docs/03 Gate 聚合）。
+   * 逐项检查 G0 确认 / G4 结构 / G3 可读性 / G2 资产 / G5 受控差异解释；
+   * 任一缺口 → 维持 structural 并列出 blockers（机器 code + 人读说明）。
+   * 诚实边界：previewable/install_verified 需 G6 真实浏览器与 G7 真机证据
+   * （ENG-001/EVID-001），未建立前本评估的上限即 install_candidate。
+   */
+  outletDeliveryLevel(versionId: string, outlet: Outlet): { level: "structural" | "install_candidate"; blockers: string[] } {
+    const blockers: string[] = [];
+
+    // G0：确认门禁（UX-003）
+    const version = this.store.getVersion(versionId);
+    if (version?.status !== "confirmed") {
+      blockers.push("VERSION_NOT_CONFIRMED：需先「确认此版本」");
+    }
+
+    // G4：导出 + 结构报告（sogou_pc 已接校验器；其余出口 not_run = 未过，docs/03 §4）
+    const exp = this.exportOutlet(versionId, outlet);
+    if (!exp.ok) {
+      blockers.push(`OUTLET_BUILD_FAILED：${exp.diagnostic.userMessage}`);
+    } else if (!exp.structuralReport) {
+      blockers.push("STRUCTURAL_NOT_RUN：该出口结构校验器未接入（视为未过）");
+    } else if (!exp.structuralReport.ok) {
+      blockers.push(`STRUCTURAL_FAILED：${exp.structuralReport.issues.join("；")}`);
+    }
+
+    // G3：可读性（该出口生效皮肤的 QA；平台覆盖存在时用覆盖皮肤）
+    const design = this.readDesign(versionId);
+    const effectiveSkin = design.outletOverrides?.[outlet]?.skin ?? design.skin;
+    const qa = checkSkin(effectiveSkin);
+    if (!qa.passed) {
+      blockers.push("QA_ERROR：存在可读性 error（可在导出面板一键修复）");
+    }
+
+    // G2：资产闭合
+    const assets = this.assetStatus(versionId, outlet);
+    if (assets.missingRequired.length > 0) {
+      blockers.push(`ASSET_MISSING：${assets.missingRequired.join("、")}`);
+    }
+
+    // G5（最小实现）：平台覆盖属"允许差异"，但必须可解释——每个 override 须有
+    // 本版本反馈溯源（targetOutlets 覆盖该出口）。无解释的差异 = 未受控漂移。
+    const overridden = Object.entries(design.outletOverrides ?? {}) as Array<[Outlet, unknown]>;
+    const explained = design.feedback?.targetOutlets ?? [];
+    for (const [o] of overridden) {
+      if (!explained.includes(o)) {
+        blockers.push(`PLATFORM_OVERRIDE_UNEXPLAINED：${o} 存在无溯源的平台差异`);
+      }
+    }
+
+    return { level: blockers.length === 0 ? "install_candidate" : "structural", blockers };
+  }
+
   /** 读取某版本的设计数据；缺失或非本编排产出则抛错。 */
   readDesign(versionId: string): VersionDesign {
     const v = this.store.getVersion(versionId);
