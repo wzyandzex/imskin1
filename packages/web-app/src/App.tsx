@@ -632,6 +632,30 @@ export function App() {
   const [confirmHint, setConfirmHint] = useState<string | null>(null);
   /** JOB-001：逐出口导出的失败清单（隔离显示，不阻断其他出口）。 */
   const [exportErrors, setExportErrors] = useState<{ outlet: Outlet; message: string }[]>([]);
+  /** A3-002：背景位图生成状态。 */
+  const [bgBusy, setBgBusy] = useState(false);
+
+  /** A3-002：LLM 图像生成 → AssetDescriptor 注册 → skin image fill → fork 新版本。
+   *  无模型/失败时提示降级（gradient 保留，诚实不伪造）。 */
+  const onGenerateBackground = async () => {
+    if (bgBusy) return;
+    setBgBusy(true);
+    try {
+      const r = await orch.applyGeneratedBackground(currentId);
+      if (!r) {
+        pushChat("sys", "背景图生成失败或未配置图像模型——当前保留渐变背景（未伪造位图）");
+        return;
+      }
+      setCurrentId(r.version.id);
+      pushChat("sys", "已生成键盘背景位图，预览自动切换为位图九宫格渲染");
+      persist(r.version.id);
+    } catch (e) {
+      pushChat("sys", `背景图生成出错：${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setBgBusy(false);
+      refresh();
+    }
+  };
   /** 确认当前版本（唯一进入 confirmed 的入口）；draft（自检未过）给可操作提示。 */
   const confirmCurrent = () => {
     try {
@@ -985,6 +1009,16 @@ export function App() {
                 </label>
               )}
               <div className="toolbar-spacer" />
+              <button
+                type="button"
+                className="export-btn"
+                onClick={onGenerateBackground}
+                disabled={!activeConfig(modelConfigs) || bgBusy}
+                data-testid="gen-bg-btn"
+                title={activeConfig(modelConfigs) ? "用你的模型生成键盘背景位图（A3-002）" : "需先在设置中配置图像生成模型"}
+              >
+                {bgBusy ? "生成中…" : "生成背景图"}
+              </button>
               <button
                 type="button"
                 className={`export-btn${pickMode ? " active" : ""}`}

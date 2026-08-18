@@ -43,6 +43,7 @@ import { skinToBaiduMobile } from "./toBaidu.ts";
 import { skinToBaiduPc } from "./toBaiduPc.ts";
 import { outletDeviceClass, outletVendor, profileForOutlet, type Outlet } from "@imskin/contracts";
 import { paintStatusBarIcons, assetsToZipEntries, type StoredAsset } from "./genAssets.ts";
+import { sha256, base64Encode } from "@imskin/zip";
 
 /** 版本 data 里承载的一版设计全量产出。 */
 export interface VersionDesign {
@@ -462,7 +463,7 @@ export class SkinOrchestrator {
     const design = this.readDesign(versionId);
     const overrideSkin = design.outletOverrides?.[outlet]?.skin;
     const common = { skin: overrideSkin ?? opts.skin, images: opts.images };
-    // A3-001c：黄金出口打入快照内注册的状态栏图标（字段名 PROVISIONAL，R-01 真机核对）
+    // A3-001c/A3-002：黄金出口打入快照内注册的资产（状态栏图标 + 背景位图）
     if (outlet === "sogou_pc") {
       const stored = this.readDesign(versionId).assets?.sogou_pc;
       if (stored && stored.length > 0) {
@@ -515,6 +516,64 @@ export class SkinOrchestrator {
     } catch {
       return null;
     }
+  }
+
+  /**
+   * A3-002：生成背景位图并应用为新版本（LLM → AssetDescriptor → SkinManifest image fill → fork）。
+   * LLM 不可用/失败时返回 null（诚实降级：gradient 保留，不伪造位图）。
+   * 成功时：① 注册 keyboard.background 资产（hash/base64/slice）；② 更新 skin 填充为
+   * image + nine-slice；③ 打包路径 bg_keyboard.png；④ fork 新版本进版本树。
+   */
+  async applyGeneratedBackground(versionId: string): Promise<{ version: Version; design: VersionDesign } | null> {
+    const bytes = await this.generateKeyboardBg(versionId);
+    if (!bytes || bytes.byteLength === 0) return null;
+
+    const prev = this.readDesign(versionId);
+    const dataUrl = `data:image/png;base64,${base64Encode(bytes)}`;
+    const DEFAULT_SLICE = { top: 100, right: 100, bottom: 100, left: 100 };
+
+    const bgAsset: StoredAsset = {
+      descriptor: {
+        id: `ast_kb_bg_${sha256(bytes).slice(0, 8)}`,
+        role: "keyboard.background",
+        mediaType: "image/png",
+        contentHash: sha256(bytes),
+        byteLength: bytes.byteLength,
+        source: "generated",
+      },
+      bytesB64: base64Encode(bytes),
+      path: "bg_keyboard.png",
+    };
+
+    // 更新所有出口的 skin 键盘背景为 image fill（皮肤换面是全端同步的）
+    const updateSkin = (s: SkinManifest): SkinManifest => ({
+      ...s,
+      keyboard: { ...s.keyboard, background: { type: "image", src: dataUrl, slice: DEFAULT_SLICE } },
+    });
+
+    const assets = { ...(prev.assets ?? ({} as Record<Outlet, StoredAsset[]>)) };
+    for (const o of ["sogou_pc", "sogou_android", "baidu_pc", "baidu_android"] as const) {
+      const list = [...(assets[o] ?? [])];
+      const idx = list.findIndex((a) => a.descriptor.role === "keyboard.background");
+      if (idx >= 0) list[idx] = bgAsset;
+      else list.push(bgAsset);
+      assets[o] = list;
+    }
+
+    const design: VersionDesign = {
+      ...prev,
+      skin: updateSkin(prev.skin),
+      // variant 保留 gradient（图像不随主题切换；深色模式可另行生成）
+      provenance: provenance({ parent: prev.provenance, text: "A3-002 背景位图生成", type: "asset_param" }),
+      feedback: { text: "LLM 生成键盘背景位图", type: "asset_param", scope: "A3 图像生成 → image fill" },
+      assets,
+    };
+    const version = this.store.fork(versionId, {
+      data: design as unknown as Record<string, unknown>,
+      status: prev.qa.passed ? "ready" : "draft",
+      label: "背景位图",
+    });
+    return { version, design };
   }
 
   /** 版本血缘（根→该版本）。 */

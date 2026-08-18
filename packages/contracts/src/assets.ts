@@ -18,6 +18,7 @@ export type AssetRole =
   | "candidateBar.textSelected"
   | "composing.text"
   | "statusBar.icons"
+  | "keyboard.background"
   | "keyboard.keyNormal"
   | "keyboard.keyPressed"
   | "preview.image";
@@ -61,6 +62,7 @@ export const ASSET_ROLES: readonly AssetRole[] = [
   "candidateBar.textSelected",
   "composing.text",
   "statusBar.icons",
+  "keyboard.background",
   "keyboard.keyNormal",
   "keyboard.keyPressed",
   "preview.image",
@@ -89,6 +91,14 @@ const PREVIEW_IMAGE: AssetProfileEntry = {
   mediaTypes: ["image/png"],
 };
 
+/** A3-002：键盘背景位图（可选——gradient 是合法替代，ADR-008）。 */
+const KEYBOARD_BG: AssetProfileEntry = {
+  role: "keyboard.background",
+  carrier: "bitmap",
+  required: false,
+  mediaTypes: ["image/png"],
+};
+
 /**
  * 搜狗 PC 资产画像首版（docs/02 §5.4 依据）：候选/拼音/按键由 config token 满足（必需要有）；
  * 状态栏图标在真实 .ssf 中为 png 位图 → bitmap 必需（当前缺失 = install_candidate 闸门缺口）。
@@ -96,7 +106,7 @@ const PREVIEW_IMAGE: AssetProfileEntry = {
 export const SOGOU_PC_ASSET_PROFILE: AssetProfileV1 = {
   schemaVersion: 1,
   outlet: "sogou_pc",
-  entries: [...CONFIG_CORE, STATUS_ICONS, PREVIEW_IMAGE],
+  entries: [...CONFIG_CORE, STATUS_ICONS, PREVIEW_IMAGE, KEYBOARD_BG],
 };
 
 /**
@@ -106,7 +116,7 @@ export const SOGOU_PC_ASSET_PROFILE: AssetProfileV1 = {
 export const GENERIC_ASSET_PROFILE: AssetProfileV1 = {
   schemaVersion: 1,
   outlet: "baidu_pc", // 过渡：其余出口经 profileForOutlet 复制并改写 outlet 字段
-  entries: [...CONFIG_CORE, STATUS_ICONS, PREVIEW_IMAGE],
+  entries: [...CONFIG_CORE, STATUS_ICONS, PREVIEW_IMAGE, KEYBOARD_BG],
 };
 
 export function profileForOutlet(outlet: Outlet): AssetProfileV1 {
