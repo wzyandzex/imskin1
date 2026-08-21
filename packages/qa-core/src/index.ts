@@ -10,7 +10,8 @@
 
 export type { QAIssue, QAReport, QASeverity } from "./types.ts";
 export { checkReadability } from "./readability.ts";
-export { checkConsistency } from "./consistency.ts";
+export { checkConsistency, CONSISTENCY_MAX_DELTA_E } from "./consistency.ts";
+export { ciede2000, ciede2000RGB, rgbToLab, type Lab } from "./ciede2000.ts";
 export { checkSkin } from "./report.ts";
 export { checkAssetBundle } from "./assets.ts";
 export type { AssetCheckResult, AssetCheckInput } from "./assets.ts";

@@ -31,7 +31,7 @@ import {
   type Classification,
   type RouteResult,
 } from "@imskin/feedback-core";
-import { checkSkin, checkAssetBundle, type QAReport, type AssetCheckResult } from "@imskin/qa-core";
+import { checkSkin, checkAssetBundle, checkConsistency, type QAReport, type AssetCheckResult } from "@imskin/qa-core";
 import { ProjectStore, type Project, type Version } from "@imskin/project-model";
 import { buildSsf, emitSkinIni, validateSsf, type SogouSkinProject } from "@imskin/sogou-adapter";
 import { buildBds } from "@imskin/baidu-mobile-adapter";
@@ -648,13 +648,23 @@ export class SkinOrchestrator {
       blockers.push(`ASSET_MISSING：${assets.missingRequired.join("、")}`);
     }
 
-    // G5（最小实现）：平台覆盖属"允许差异"，但必须可解释——每个 override 须有
-    // 本版本反馈溯源（targetOutlets 覆盖该出口）。无解释的差异 = 未受控漂移。
+    // G5（R-10 校准版）：两层——① 平台覆盖必须有反馈溯源（受控差异）；
+    // ② 覆盖出口与主设计的感知色差 ≤ ΔE₀₀ 5（CIEDE2000，ADR-009）
     const overridden = Object.entries(design.outletOverrides ?? {}) as Array<[Outlet, unknown]>;
     const explained = design.feedback?.targetOutlets ?? [];
     for (const [o] of overridden) {
       if (!explained.includes(o)) {
         blockers.push(`PLATFORM_OVERRIDE_UNEXPLAINED：${o} 存在无溯源的平台差异`);
+      }
+    }
+    // G5-②：覆盖出口的生效皮肤 vs 主皮肤——CIEDE2000 感知色差
+    if (design.outletOverrides?.[outlet]) {
+      const overrideSkin = design.outletOverrides[outlet]!.skin;
+      const issues = checkConsistency(design.skin, overrideSkin);
+      for (const iss of issues) {
+        if (iss.code === "CONSISTENCY_DIVERGENCE") {
+          blockers.push(`G5_${iss.code}：${iss.message}`);
+        }
       }
     }
 
