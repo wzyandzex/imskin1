@@ -81,7 +81,9 @@ describe("QA-001 四出口交付状态卡", () => {
     await user.click(screen.getByTestId("confirm-version"));
     const sgRow = screen.getByTestId("outlet-status-sogou_pc");
     expect(sgRow.textContent).not.toContain("确认此版本");
-    expect(sgRow.textContent).toContain("statusBar.icons"); // 必需位图缺口如实显示
+    // A3-001 后：状态栏图标已闭合 → sogou_pc 无缺口（install_candidate）
+    expect(sgRow.textContent).toContain("install_candidate");
+    expect(sgRow.textContent).not.toContain("ASSET_MISSING");
     // 未接校验器的出口显示 not_run
     expect(screen.getByTestId("outlet-status-baidu_pc").textContent).toContain("STRUCTURAL_NOT_RUN");
   });

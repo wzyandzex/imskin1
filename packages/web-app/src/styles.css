@@ -933,6 +933,7 @@ body {
   font-weight: 600;
 }
 .outlet-status-row .dl-structural { color: #b8860b; }
+.outlet-status-row .dl-previewable { color: #4a90d9; }
 .outlet-status-row .dl-install_candidate { color: #2e9053; }
 .outlet-status-row ul {
   margin: 4px 0 0;
