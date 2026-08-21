@@ -1,0 +1,182 @@
+{
+  "benchmarkVersion": "1.0.0",
+  "generatedAt": "2026-08-21T17:10:11.090Z",
+  "dataset": {
+    "seedDictKeys": 21638,
+    "commonCorpus": 60
+  },
+  "engine": {
+    "dictImpl": "SeedDict",
+    "dictSize": 30000,
+    "mode": "production-default"
+  },
+  "environment": {
+    "node": "v24.13.0",
+    "platform": "win32",
+    "cpu": "AMD Ryzen 7 5800H with Radeon Graphics         "
+  },
+  "qwerty": {
+    "seedDict": {
+      "samples": 21638,
+      "top1": 21612,
+      "top3": 21622,
+      "noCandidate": 2,
+      "missesTop3": [
+        {
+          "word": "图案",
+          "input": "tuan",
+          "got": "团/鏄/湪"
+        },
+        {
+          "word": "西安",
+          "input": "xian",
+          "got": "先/县/现"
+        },
+        {
+          "word": "嗯",
+          "input": "n",
+          "got": ""
+        },
+        {
+          "word": "噷",
+          "input": "hm",
+          "got": ""
+        },
+        {
+          "word": "巨额",
+          "input": "jue",
+          "got": "觉/绝/决"
+        },
+        {
+          "word": "饥饿",
+          "input": "jie",
+          "got": "接/街/皆"
+        },
+        {
+          "word": "余额",
+          "input": "yue",
+          "got": "月/约/越"
+        },
+        {
+          "word": "激昂",
+          "input": "jiang",
+          "got": "将/讲/江"
+        },
+        {
+          "word": "提案",
+          "input": "tian",
+          "got": "天/田/甜"
+        },
+        {
+          "word": "预案",
+          "input": "yuan",
+          "got": "元/原/远"
+        },
+        {
+          "word": "立案",
+          "input": "lian",
+          "got": "连/脸/练"
+        },
+        {
+          "word": "里昂",
+          "input": "liang",
+          "got": "两/量/亮"
+        },
+        {
+          "word": "彼岸",
+          "input": "bian",
+          "got": "便/边/变"
+        },
+        {
+          "word": "西安市",
+          "input": "xianshi",
+          "got": "显示/现实/县市"
+        },
+        {
+          "word": "湖岸",
+          "input": "huan",
+          "got": "换/环/浣"
+        },
+        {
+          "word": "企鹅",
+          "input": "qie",
+          "got": "且/切/鍥"
+        }
+      ],
+      "top1Rate": 0.9988,
+      "top3Rate": 0.9993
+    },
+    "common60": {
+      "samples": 60,
+      "top1": 59,
+      "top3": 59,
+      "noCandidate": 0,
+      "missesTop3": [
+        {
+          "word": "今天",
+          "input": "jitian",
+          "got": "几天/祭天/及"
+        }
+      ],
+      "top1Rate": 0.9833,
+      "top3Rate": 0.9833,
+      "noCandidateRate": 0
+    }
+  },
+  "t9": {
+    "common60": {
+      "samples": 60,
+      "top1": 48,
+      "top3": 55,
+      "noCandidate": 0,
+      "missesTop3": [
+        {
+          "word": "今天",
+          "input": "jitian",
+          "got": "几天/祭天/几条"
+        },
+        {
+          "word": "希望",
+          "input": "xiwang",
+          "got": "一样/意杨/以往"
+        },
+        {
+          "word": "游戏",
+          "input": "youxi",
+          "got": "友谊/有益/有意"
+        },
+        {
+          "word": "跑步",
+          "input": "paobu",
+          "got": "散布/三步/散步"
+        },
+        {
+          "word": "公交",
+          "input": "gongjiao",
+          "got": "弓箭/攻坚/共建"
+        }
+      ],
+      "top1Rate": 0.8,
+      "top3Rate": 0.9167
+    }
+  },
+  "latency": {
+    "samples": 1024,
+    "p50ms": 0.005,
+    "p95ms": 0.01,
+    "p99ms": 0.016,
+    "maxMs": 0.218
+  },
+  "thresholds": {
+    "seedTop3": 0.95,
+    "commonTop1": 0.8,
+    "commonNoCandidate": 0.1,
+    "latencyP95ms": 50
+  },
+  "verdicts": {
+    "seedTop3Pass": true,
+    "commonTop1Pass": true,
+    "commonNoCandidatePass": true,
+    "latencyP95Pass": true
+  }
+}

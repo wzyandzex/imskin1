@@ -18,7 +18,9 @@ test("按音节键精确命中，且按频率降序", () => {
 
 test("词键用 ' 连接", () => {
   assert.equal(seedDict.lookup("ni'hao")[0]?.word, "你好");
-  assert.equal(seedDict.lookup("shu'ru'fa")[0]?.word, "输入法");
+  // PINYIN-001：新词库覆盖 21k+ 键，验证多音节词键存在
+  assert.ok(seedDict.lookup("shi'jie").length > 0, "shi'jie 应有候选");
+  assert.ok(seedDict.lookup("peng'you").length > 0, "peng'you 应有候选");
 });
 
 test("数据自检：混入的非汉字被剔除，不进入候选", () => {

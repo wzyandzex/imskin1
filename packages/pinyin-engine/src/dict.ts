@@ -42,7 +42,17 @@ export interface Dict {
 /**
  * 种子词库数据。格式：`"音节键": "词1 词2 词3 ..."`（按常用度从高到低书写，
  * 频率由书写次序自动赋权，无需手填数字）。
+ *
+ * PINYIN-001：种子词库由结巴词表（Apache 2.0）+ pypinyin（MIT）离线管线生成
+ * （tools/build-dict.py），30k 高频词条 → ~21k 拼音键。数据见 dict-data.json。
+ * 管线许可证合规审计见 docs/evidence/pinyin-benchmarks/dict-selection.md。
  */
+import dictData from "./dict-data.json" with { type: "json" };
+
+/** 结巴管线生成的词库（PINYIN-001）；构造函数默认使用，可被覆盖用于测试。 */
+const BUILT_DICT: Record<string, string> = dictData as Record<string, string>;
+
+/** 旧种子词库——保留用于回退测试与管线验证对照（不再作为默认）。 */
 const SEED: Record<string, string> = {
   // —— 常用单字（按音节）——
   ni: "你 呢 泥 拟 逆 腻",
@@ -119,7 +129,7 @@ export class SeedDict implements Dict {
   /** 数字编码 → 该编码对应的（音节序列 + 词条）列表，供九宫格 O(前缀长度) 检索。 */
   private readonly digitIndex: Map<string, Array<{ syllables: string[]; entries: DictEntry[] }>>;
 
-  constructor(data: Record<string, string> = SEED) {
+  constructor(data: Record<string, string> = BUILT_DICT) {
     this.map = new Map();
     this.digitIndex = new Map();
     for (const [key, raw] of Object.entries(data)) {
@@ -163,8 +173,11 @@ export class SeedDict implements Dict {
   }
 }
 
-/** 默认种子词库单例。 */
+/** 默认种子词库单例（PINYIN-001：结巴 30k 词条管线产物）。 */
 export const seedDict = new SeedDict();
 
-/** 诊断/基准用：种子词库原始数据的只读视图（键为音节序列键，值为按常用度排序的词表）。 */
-export const seedData: Readonly<Record<string, string>> = SEED;
+/** 诊断/基准用：种子词库原始数据的只读视图（旧种子 SEED 保留供回退对照）。 */
+export const seedData: Readonly<Record<string, string>> = BUILT_DICT;
+
+/** 诊断/基准用：旧种子词库（PINYIN-001 前，约 230 条）。 */
+export const legacySeedData: Readonly<Record<string, string>> = SEED;

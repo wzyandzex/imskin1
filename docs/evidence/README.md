@@ -12,14 +12,15 @@ performance/<date>-<env>/             # 性能基准报告
 security/<date>-<scope>/              # 安全测试记录
 ```
 
-## 当前状态（2026-08-16）
+## 当前状态（2026-08-18）
 
-- `pinyin-benchmarks/initial/` —— **已有**（PINYIN-001 基准基线：引擎自检 98.1% ✅ / 日常 60 词 8.3% ❌ gap / 延迟 0.028ms ✅）。
-- `outlets/*`：仍无任何安装验证证据——四出口均为 `structural`，无一达到 `previewable / install_candidate / install_verified`。
+- `pinyin-benchmarks/jieba-30k/` —— **R-09 已关闭**（结巴 30k 管线：top1 98.3% / 无候选 0% / P95 0.01ms，四项门槛全过）。
+- `pinyin-benchmarks/initial/` —— 种子库基线（日常 8.3%，历史参照）。
+- `outlets/*`：仍无安装验证证据——`sogou_pc` 已达 install_candidate（A3-001/A3-002 ✅），真机执行（EVID-001b）待用户操作。
 
 第一份安装证据目标（按 `docs/06-路线图`）：
 
-1. `outlets/sogou-pc/<version>/` —— EVID-001 产出。
+1. `outlets/sogou-pc/<version>/` —— EVID-001b 产出。
 
 ## 新增证据检查表
 
