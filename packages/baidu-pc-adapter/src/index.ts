@@ -16,4 +16,4 @@ export {
   type ButtonImage,
   type StretchArea,
 } from "./ui-xml.ts";
-export { buildBps, type BaiduPcProject } from "./bps.ts";
+export { buildBps, type BaiduPcProject } from "./bps.ts";export { validateBps, type StructuralReport } from "./validate.ts";

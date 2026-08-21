@@ -10,3 +10,4 @@ export { zipStore, listZip, type ZipEntry } from "./zip.ts";
 export { sha256 } from "./sha256.ts";
 export { pngEncode } from "./png.ts";
 export { base64Encode, base64Decode } from "./base64.ts";
+export { validateZipStructure, checkRequiredEntries, checkDecodable, checkContains, finalizeReport, type StructuralReport } from "./validate.ts";

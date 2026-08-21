@@ -8,4 +8,4 @@
 export { THEME_KEYS, emitPhoneTheme, emitSkinIni, type ThemeModel } from "./theme.ts";
 export { LAYOUT_FILES, emitLayoutIni, emitColorsIni, type LayoutIni } from "./layout.ts";
 export { sanitizeInline } from "./ini.ts";
-export { buildSsf, type SogouMobileProject } from "./ssf.ts";
+export { buildSsf, type SogouMobileProject } from "./ssf.ts";export { validateSogouMobileSsf, type StructuralReport } from "./validate.ts";

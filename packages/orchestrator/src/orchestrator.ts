@@ -34,6 +34,9 @@ import {
 import { checkSkin, checkAssetBundle, checkConsistency, type QAReport, type AssetCheckResult } from "@imskin/qa-core";
 import { ProjectStore, type Project, type Version } from "@imskin/project-model";
 import { buildSsf, emitSkinIni, validateSsf, type SogouSkinProject } from "@imskin/sogou-adapter";
+import { validateSogouMobileSsf } from "@imskin/sogou-mobile-adapter";
+import { validateBps } from "@imskin/baidu-pc-adapter";
+import { validateBds } from "@imskin/baidu-mobile-adapter";
 import { buildBds } from "@imskin/baidu-mobile-adapter";
 import { buildBps } from "@imskin/baidu-pc-adapter";
 import { buildSsf as buildSogouMobileSsf, type SogouMobileProject } from "@imskin/sogou-mobile-adapter";
@@ -480,15 +483,15 @@ export class SkinOrchestrator {
         }
         case "sogou_android": {
           const r = this.exportSogouMobile(versionId, common);
-          return { ok: true, outlet, bytes: r.bytes, imageCount: r.imageCount, layoutCount: r.layoutCount };
+          return { ok: true, outlet, bytes: r.bytes, imageCount: r.imageCount, layoutCount: r.layoutCount, structuralReport: validateSogouMobileSsf(r.bytes) };
         }
         case "baidu_pc": {
           const r = this.exportBaiduPc(versionId, common);
-          return { ok: true, outlet, bytes: r.bytes, imageCount: r.imageCount };
+          return { ok: true, outlet, bytes: r.bytes, imageCount: r.imageCount, structuralReport: validateBps(r.bytes) };
         }
         case "baidu_android": {
           const r = this.exportBaiduMobile(versionId, common);
-          return { ok: true, outlet, bytes: r.bytes, imageCount: r.imageCount, layoutCount: r.layoutCount };
+          return { ok: true, outlet, bytes: r.bytes, imageCount: r.imageCount, layoutCount: r.layoutCount, structuralReport: validateBds(r.bytes) };
         }
       }
     } catch (e) {

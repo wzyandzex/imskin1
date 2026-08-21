@@ -53,20 +53,22 @@ test("validateSsf：路径含 .. 段 / 重复条目 → fail（路径安全）",
   assert.ok(r.issues.some((i) => i.includes("重复条目")));
 });
 
-test("exportOutlet 附结构报告（sogou_pc）；其余出口暂无（not_run 语义）", async () => {
+test("exportOutlet 附结构报告：四出口均有校验器", async () => {
   const { SkinOrchestrator } = await import("../src/orchestrator.ts");
   const orch = new SkinOrchestrator();
   const p = orch.createProject("V");
   const g = orch.generate(p.id, {
     styleKeywords: ["清新"], palette: { primary: "#3faf7d" }, mood: "明亮", cornerRadius: "large",
   }, { id: "s", name: "V" });
-  const sg = orch.exportOutlet(g.version.id, "sogou_pc");
-  assert.ok(sg.ok);
-  if (sg.ok) {
-    assert.ok(sg.structuralReport);
-    assert.equal(sg.structuralReport!.ok, true);
+
+  // 四口全部有结构报告（不再有 not_run）
+  for (const o of ["sogou_pc", "sogou_android", "baidu_pc", "baidu_android"] as const) {
+    const r = orch.exportOutlet(g.version.id, o);
+    assert.ok(r.ok, `${o} export should succeed`);
+    if (r.ok) {
+      assert.ok(r.structuralReport, `${o} should have structural report`);
+      // 校验器自身通过（zip 结构合法、必需入口存在）
+      assert.equal(r.structuralReport!.ok, true, `${o}: ${r.structuralReport!.issues.join("；")}`);
+    }
   }
-  const bd = orch.exportOutlet(g.version.id, "baidu_pc");
-  assert.ok(bd.ok);
-  if (bd.ok) assert.equal(bd.structuralReport, undefined); // 校验器随各出口字段收口接入
 });

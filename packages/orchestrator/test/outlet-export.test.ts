@@ -101,16 +101,16 @@ test("QA-001 outletDeliveryLevel：未确认 → structural；确认后 sogou_pc
   assert.deepEqual(b.blockers, []); // 无缺口
 });
 
-test("QA-001 outletDeliveryLevel：未接校验器的出口按 not_run 阻断；平台覆盖必须有溯源", () => {
+test("QA-001 outletDeliveryLevel：结构校验器已接四口；平台覆盖必须有溯源", () => {
   const { orch, versionId } = boot();
   const bd = orch.outletDeliveryLevel(versionId, "baidu_pc");
-  assert.ok(bd.blockers.some((x) => x.startsWith("STRUCTURAL_NOT_RUN")));
+  // 校验器已接：STRUCTURAL_NOT_RUN 不再出现
+  assert.ok(!bd.blockers.some((x) => x.startsWith("STRUCTURAL_NOT_RUN")));
 
   // 平台定向反馈 → 覆盖有 feedback.targetOutlets 溯源 → 不产生 UNEXPLAINED 缺口
   const fb = orch.applyFeedback(versionId, "百度这边候选词字太小");
   const after = orch.outletDeliveryLevel(fb.version.id, "baidu_pc");
   assert.ok(!after.blockers.some((x) => x.startsWith("PLATFORM_OVERRIDE_UNEXPLAINED")));
-  // 溯源覆盖的出口（baidu_pc）QA 用覆盖皮肤；未覆盖出口用主皮肤——不抛即结构正确
   assert.ok(Array.isArray(after.blockers));
 });
 
@@ -126,11 +126,10 @@ test("A3-001 交付闸门：确认后 sogou_pc 达 install_candidate（资产闭
   assert.deepEqual(post.blockers, [], JSON.stringify(post.blockers));
   assert.equal(post.level, "install_candidate"); // A3-001：必需位图已由确定性资产闭合
 
-  // 其余出口仍 structural（结构校验器 not_run）
+  // 其余出口确认后也达 install_candidate（校验器已接 + 资产闭合）
   for (const o of ["sogou_android", "baidu_pc", "baidu_android"] as const) {
     const r = orch.outletDeliveryLevel(versionId, o);
-    assert.equal(r.level, "structural");
-    assert.ok(r.blockers.some((b) => b.startsWith("STRUCTURAL_NOT_RUN")), o);
+    assert.equal(r.level, "install_candidate", `${o}: ${r.blockers.join("；")}`);
   }
 });
 

@@ -15,4 +15,4 @@ export {
   type CssIni,
 } from "./layout.ts";
 export { sanitizeInline } from "./ini.ts";
-export { buildBds, type BaiduMobileProject } from "./bds.ts";
+export { buildBds, type BaiduMobileProject } from "./bds.ts";export { validateBds, type StructuralReport } from "./validate.ts";
