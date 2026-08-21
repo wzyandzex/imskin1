@@ -44,6 +44,7 @@ import { skinToBaiduPc } from "./toBaiduPc.ts";
 import { outletDeviceClass, outletVendor, profileForOutlet, type Outlet } from "@imskin/contracts";
 import { paintStatusBarIcons, assetsToZipEntries, type StoredAsset } from "./genAssets.ts";
 import { sha256, base64Encode } from "@imskin/zip";
+import { e2eEvidencePassed } from "./e2eGate.ts";
 
 /** 版本 data 里承载的一版设计全量产出。 */
 export interface VersionDesign {
@@ -605,13 +606,16 @@ export class SkinOrchestrator {
   }
 
   /**
-   * QA-001：某出口的交付等级评估（docs/03 Gate 聚合）。
+   * QA-001/ENG-001b：某出口的交付等级评估（docs/03 Gate 聚合）。
    * 逐项检查 G0 确认 / G4 结构 / G3 可读性 / G2 资产 / G5 受控差异解释；
    * 任一缺口 → 维持 structural 并列出 blockers（机器 code + 人读说明）。
-   * 诚实边界：previewable/install_verified 需 G6 真实浏览器与 G7 真机证据
-   * （ENG-001/EVID-001），未建立前本评估的上限即 install_candidate。
+   *
+   * ENG-001b：新增 G6 浏览器 E2E 证据检查——E2E 通过时 outlet 可获 previewable
+   * （介于 structural 与 install_candidate 之间的独立路径，docs/03 §3）。
+   * G6 证据来源：docs/evidence/e2e/latest.json（Playwright teardown 写入）。
+   * install_verified 需 G7 真机证据（EVID-001），本评估不授予。
    */
-  outletDeliveryLevel(versionId: string, outlet: Outlet): { level: "structural" | "install_candidate"; blockers: string[] } {
+  outletDeliveryLevel(versionId: string, outlet: Outlet): { level: "structural" | "previewable" | "install_candidate"; blockers: string[] } {
     const blockers: string[] = [];
 
     // G0：确认门禁（UX-003）
@@ -654,7 +658,19 @@ export class SkinOrchestrator {
       }
     }
 
-    return { level: blockers.length === 0 ? "install_candidate" : "structural", blockers };
+    // install_candidate 全过 → 直接给
+    if (blockers.length === 0) return { level: "install_candidate", blockers };
+
+    // ENG-001b：G6 检查——E2E 证据通过时可获 previewable（独立于 install_candidate 路径）
+    if (e2eEvidencePassed()) {
+      // previewable 的前置：G3 可读性通过（不能给看不清的皮肤标 previewable）
+      if (qa.passed) {
+        return { level: "previewable", blockers };
+      }
+      blockers.push("G6_PREVIEWABLE_BLOCKED：QA error 存在，previewable 暂不授予");
+    }
+
+    return { level: "structural", blockers };
   }
 
   /** 读取某版本的设计数据；缺失或非本编排产出则抛错。 */

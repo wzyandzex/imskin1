@@ -15,7 +15,8 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "build": "npm run build -w @imskin/web-app",
     "verify": "npm run typecheck && npm test && npm run build",
-    "ci": "npm run verify"
+    "ci": "npm run verify",
+    "test:e2e": "npm run test:e2e -w @imskin/web-app --if-present"
   },
   "engines": {
     "node": ">=22"

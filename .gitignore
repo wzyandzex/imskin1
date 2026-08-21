@@ -21,3 +21,5 @@ Thumbs.db
 
 # 本地 agent 会话文件
 .zcode/
+playwright-report/
+test-results/
