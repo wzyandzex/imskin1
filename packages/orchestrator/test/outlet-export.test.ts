@@ -139,8 +139,8 @@ test("A3-001 资产真实性：快照含四出口图标资产（hash 合法、�
   const d = orch.readDesign(versionId);
   assert.ok(d.assets);
   for (const o of ["sogou_pc", "sogou_android", "baidu_pc", "baidu_android"] as const) {
-    const list: Array<{ descriptor: { contentHash: string; mediaType: string }; path: string }> = d.assets![o];
-    assert.equal(list.length, 3); // 三枚状态栏图标
+    const list: Array<{ descriptor: { contentHash: string; mediaType: string; density?: string }; path: string }> = d.assets![o];
+    assert.equal(list.length, 9); // MOB-003：3 枚图标 × 3 档 DPI（1x/2x/4x）
     for (const a of list) {
       assert.match(a.descriptor.contentHash, /^[0-9a-f]{64}$/);
       assert.equal(a.descriptor.mediaType, "image/png");

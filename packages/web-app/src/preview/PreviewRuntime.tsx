@@ -177,7 +177,7 @@ export function PreviewRuntime({ skin, device = "pc", outlet = "sogou_pc", sound
         pickedLabel={pickedLabel}
       />
 
-      <VirtualKeyboard layout={layoutFor(view.mode, panel)} style={skin.keyboard} onAction={run} onPickElement={onPickElement} pickedLabel={pickedLabel} />
+      <VirtualKeyboard layout={layoutFor(view.mode, panel, outlet)} style={skin.keyboard} onAction={run} onPickElement={onPickElement} pickedLabel={pickedLabel} />
     </div>
   );
 }

@@ -92,10 +92,55 @@ export const EMOJI_LAYOUT: KeyCap[][] = [
   [TO_PINYIN, TO_SYMBOL, TO_NUMBER, SPACE, BACKSPACE, ENTER],
 ];
 
-/** 按拼音模式 + 当前面板选布局。面板优先（符号/数字/表情面板与拼音模式正交）。 */
-export function layoutFor(mode: "qwerty" | "t9", panel: PanelKind = "pinyin"): KeyCap[][] {
+/** 按拼音模式 + 当前面板选布局。面板优先（符号/数字/表情面板与拼音模式正交）。
+ *  MOB-004：移动端传入 outlet 时按平台选择专属底行布局（搜狗/百度功能行不同）。 */
+export function layoutFor(mode: "qwerty" | "t9", panel: PanelKind = "pinyin", outlet?: string): KeyCap[][] {
   if (panel === "symbol") return SYMBOL_LAYOUT;
   if (panel === "number") return NUMBER_LAYOUT;
   if (panel === "emoji") return EMOJI_LAYOUT;
-  return mode === "t9" ? T9_LAYOUT : QWERTY_LAYOUT;
+  if (mode === "t9") {
+    if (outlet === "baidu_android") return BAIDU_ANDROID_T9_LAYOUT;
+    if (outlet === "sogou_android") return SOGOU_ANDROID_T9_LAYOUT;
+    return T9_LAYOUT;
+  }
+  // qwerty mode
+  if (outlet === "baidu_android") return BAIDU_ANDROID_QWERTY_LAYOUT;
+  if (outlet === "sogou_android") return SOGOU_ANDROID_QWERTY_LAYOUT;
+  return QWERTY_LAYOUT;
 }
+
+// —— MOB-004：Android 平台专属布局（搜狗/百度底行功能键不同，docs/02 §6.3/§8.3） ——
+
+/** 搜狗 Android 26 键：底行 = 拼/符/空格/退格/回车（搜狗风格：九/26 切换突出）。 */
+export const SOGOU_ANDROID_QWERTY_LAYOUT: KeyCap[][] = [
+  "qwertyuiop".split("").map((ch, i) => topLetter(ch, "1234567890"[i])),
+  "asdfghjkl".split("").map(letter),
+  [TO_T9, ..."zxcvbnm".split("").map(letter), BACKSPACE],
+  [TO_SYMBOL, TO_NUMBER, COMMA, SPACE, PERIOD, ENTER],
+];
+
+/** 百度 Android 26 键：底行 = 中英/符/语音/空格/回车（百度风格：中英+语音入口突出）。 */
+const TO_EN: KeyCap = { label: "中/EN", action: { type: "literal", value: "" }, special: true, flex: 1.5 };
+const VOICE: KeyCap = { label: "🎤", action: { type: "literal", value: "" }, special: true, flex: 1.2 };
+export const BAIDU_ANDROID_QWERTY_LAYOUT: KeyCap[][] = [
+  "qwertyuiop".split("").map((ch, i) => topLetter(ch, "1234567890"[i])),
+  "asdfghjkl".split("").map(letter),
+  [..."zxcvbnm".split("").map(letter), BACKSPACE],
+  [TO_EN, TO_SYMBOL, VOICE, SPACE, ENTER],
+];
+
+/** 搜狗 Android T9：底行 = 拼/符/空格/123/回车。 */
+export const SOGOU_ANDROID_T9_LAYOUT: KeyCap[][] = [
+  [t9Key("2", "abc"), t9Key("3", "def"), t9Key("4", "ghi")],
+  [t9Key("5", "jkl"), t9Key("6", "mno"), t9Key("7", "pqrs")],
+  [t9Key("8", "tuv"), t9Key("9", "wxyz"), BACKSPACE],
+  [TO_QWERTY, TO_SYMBOL, SPACE, TO_NUMBER, ENTER],
+];
+
+/** 百度 Android T9：底行 = 拼/符/语音/空格/回车（无 123 入口，语音替代）。 */
+export const BAIDU_ANDROID_T9_LAYOUT: KeyCap[][] = [
+  [t9Key("2", "abc"), t9Key("3", "def"), t9Key("4", "ghi")],
+  [t9Key("5", "jkl"), t9Key("6", "mno"), t9Key("7", "pqrs")],
+  [t9Key("8", "tuv"), t9Key("9", "wxyz"), BACKSPACE],
+  [TO_QWERTY, TO_SYMBOL, VOICE, SPACE, ENTER],
+];

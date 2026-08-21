@@ -18,8 +18,12 @@ export interface StoredAsset {
   path: string;
 }
 
-const SIZE = 24;
+const BASE_SIZE = 24;
 const RADIUS = 6;
+
+/** MOB-003 多分辨率档位：图标按 1x/2x/4x 生成，对应 mdpi/hdpi/xxxhdpi。 */
+const DPI_SIZES = { 1: BASE_SIZE, 2: BASE_SIZE * 2, 4: BASE_SIZE * 4 } as const;
+export type DpiScale = keyof typeof DPI_SIZES;
 
 /** 圆角内判定（像素中心到圆角矩形的距离近似）。 */
 function inRoundRect(x: number, y: number, size: number, radius: number): boolean {
@@ -37,52 +41,64 @@ function hexToRgb(hex: string): [number, number, number] {
   return [(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff];
 }
 
-/** 画一枚图标：圆角实底 + 中心前景圆点。返回 PNG 字节。 */
-function paintIcon(bgHex: string, fgHex: string): Uint8Array {
+/** 画一枚图标：圆角实底 + 中心前景圆点。按指定尺寸渲染（MOB-003 多分辨率）。 */
+function paintIcon(bgHex: string, fgHex: string, size: number): Uint8Array {
   const [br, bg, bb] = hexToRgb(bgHex);
   const [fr, fgg, fb] = hexToRgb(fgHex);
-  const px = new Uint8Array(SIZE * SIZE * 4);
-  const c = SIZE / 2;
-  for (let y = 0; y < SIZE; y++) {
-    for (let x = 0; x < SIZE; x++) {
-      const i = (y * SIZE + x) * 4;
-      if (!inRoundRect(x + 0.5, y + 0.5, SIZE, RADIUS)) {
+  const radius = (RADIUS * size) / BASE_SIZE; // 比例缩放圆角
+  const dotR = (5 * size) / BASE_SIZE; // 比例缩放圆点
+  const px = new Uint8Array(size * size * 4);
+  const c = size / 2;
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const i = (y * size + x) * 4;
+      if (!inRoundRect(x + 0.5, y + 0.5, size, radius)) {
         px[i + 3] = 0; // 圆角外透明
         continue;
       }
       const dx = x + 0.5 - c;
       const dy = y + 0.5 - c;
-      if (dx * dx + dy * dy <= 5 * 5) {
+      if (dx * dx + dy * dy <= dotR * dotR) {
         px[i] = fr; px[i + 1] = fgg; px[i + 2] = fb; px[i + 3] = 255; // 前景圆点
       } else {
         px[i] = br; px[i + 1] = bg; px[i + 2] = bb; px[i + 3] = 255; // 实底
       }
     }
   }
-  return pngEncode(SIZE, SIZE, px);
+  return pngEncode(size, size, px);
 }
 
-/** 状态栏图标集（三枚：中/英、全/半、软键盘——真实键名待真机核对 R-01）。
- *  底色 = 候选选中底、前景圆点 = 候选文字色（对"候选颜色太深/太浅"反馈敏感）。 */
+/**
+ * 状态栏图标集（三枚：中/英、全/半、软键盘——真实键名待真机核对 R-01）。
+ * 底色 = 候选选中底、前景圆点 = 候选文字色（对"候选颜色太深/太浅"反馈敏感）。
+ * MOB-003：每枚图标按 1x/2x/4x 三档分辨率生成（对应 mdpi/hdpi/xxxhdpi），
+ * path 带 @Nx 后缀（status/zhong.png, status/zhong@2x.png, status/zhong@4x.png）。
+ */
 export function paintStatusBarIcons(spec: { selectedFill: string; candidateText: string }): StoredAsset[] {
   const names = ["zhong", "quan", "jianpan"];
-  return names.map((name, idx) => {
-    // 前景用候选文字色；末枚反色点缀以示区分
-    const bytes = paintIcon(spec.selectedFill, spec.candidateText);
-    return {
-      descriptor: {
-        id: `ast_sb_${name}_${idx}`,
-        role: "statusBar.icons",
-        mediaType: "image/png",
-        contentHash: sha256(bytes),
-        byteLength: bytes.byteLength,
-        dimensions: { width: SIZE, height: SIZE },
-        source: "generated",
-      },
-      bytesB64: base64Encode(bytes),
-      path: `status/${name}.png`,
-    };
-  });
+  const assets: StoredAsset[] = [];
+  for (const [idx, name] of names.entries()) {
+    for (const [scale, size] of Object.entries(DPI_SIZES)) {
+      const s = Number(scale);
+      const suffix = s === 1 ? "" : `@${s}x`;
+      const bytes = paintIcon(spec.selectedFill, spec.candidateText, size);
+      assets.push({
+        descriptor: {
+          id: `ast_sb_${name}_${idx}_${s}x`,
+          role: "statusBar.icons",
+          mediaType: "image/png",
+          contentHash: sha256(bytes),
+          byteLength: bytes.byteLength,
+          dimensions: { width: size, height: size },
+          density: s === 1 ? "mdpi" : s === 2 ? "xhdpi" : "xxxhdpi",
+          source: "generated",
+        },
+        bytesB64: base64Encode(bytes),
+        path: `status/${name}${suffix}.png`,
+      });
+    }
+  }
+  return assets;
 }
 
 /** StoredAsset → 出口 zip 条目。 */

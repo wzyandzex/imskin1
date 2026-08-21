@@ -941,6 +941,25 @@ body {
   color: var(--ink-2, #667085);
 }
 .outlet-status-row .dl-ok { color: #2e9053; margin-left: 8px; }
+/* MOB-003：DPI 发虚预警 */
+.dpi-blur-warning {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  color: #b8860b;
+  background: rgba(184, 134, 11, 0.08);
+  border: 1px dashed rgba(184, 134, 11, 0.4);
+  border-radius: 6px;
+  padding: 2px 8px;
+  white-space: nowrap;
+  z-index: 10;
+}
+/* MOB-004：Android 平台功能键区分 */
+.vk-key.vk-platform-key {
+  font-size: 11px;
+}
 /* MOB-001：候选词手势（滑动翻页 + 抬起选词）需要横向指针流，禁浏览器默认横向平移 */
 .candidate {
   touch-action: pan-y;
